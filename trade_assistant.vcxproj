@@ -1,0 +1,426 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugSecure|Win32">
+      <Configuration>DebugSecure</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="DebugSecure|x64">
+      <Configuration>DebugSecure</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D4D94EA2-D497-4B99-B57A-5F80351F28AD}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>trade_assistant</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <NuGetPackageImportStamp>21466138</NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <UseFullPaths>true</UseFullPaths>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\lib\lua;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>liblua53.a;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <UseFullPaths>true</UseFullPaths>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\lib\lua;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>liblua53.a;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;NOMINMAX;BOOST_PYTHON_STATIC_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <UseFullPaths>true</UseFullPaths>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\python27\include;D:\lib\cryptopp565</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\lib\lua;D:\lib\python\Python27\libs;D:\lib\cryptopp565\libs\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>liblua53.a;cryptlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugSecure|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;NOMINMAX;BOOST_PYTHON_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <UseFullPaths>true</UseFullPaths>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\python27\include;D:\lib\cryptopp565</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\lib\lua;D:\lib\python\Python27\libs;D:\lib\cryptopp565\libs\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>liblua53.a;cryptlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;BOOST_PYTHON_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\Python27\include;D:\lib\cryptopp565;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <UseFullPaths>true</UseFullPaths>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>liblua53.a;cryptlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\lib\lua;D:\lib\python\Python27\libs;D:\lib\cryptopp565\libs\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cipher_aes.h" />
+    <ClInclude Include="environment.h" />
+    <ClInclude Include="hhmmss.h" />
+    <ClInclude Include="holiday_investigator.h" />
+    <ClInclude Include="http_cookies.h" />
+    <ClInclude Include="lua_accessor.h" />
+    <ClInclude Include="random_generator.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="securities_session.h" />
+    <ClInclude Include="securities_session_sbi.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="stock_code.h" />
+    <ClInclude Include="stock_ordering_manager.h" />
+    <ClInclude Include="stock_portfolio.h" />
+    <ClInclude Include="stock_trading_command.h" />
+    <ClInclude Include="stock_trading_machine.h" />
+    <ClInclude Include="stock_trading_starter.h" />
+    <ClInclude Include="stock_trading_starter_sbi.h" />
+    <ClInclude Include="stock_trading_tactics.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="trade_assistant_setting.h" />
+    <ClInclude Include="trade_assistor.h" />
+    <ClInclude Include="trade_define.h" />
+    <ClInclude Include="trade_struct.h" />
+    <ClInclude Include="trading_machine.h" />
+    <ClInclude Include="update_message.h" />
+    <ClInclude Include="utility_datetime.h" />
+    <ClInclude Include="utility_debug.h" />
+    <ClInclude Include="utility_http.h" />
+    <ClInclude Include="utility_python.h" />
+    <ClInclude Include="utility_string.h" />
+    <ClInclude Include="win_main.h" />
+    <ClInclude Include="win_main_struct.h" />
+    <ClInclude Include="yymmdd.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cipher_aes.cpp" />
+    <ClCompile Include="environment.cpp" />
+    <ClCompile Include="holiday_investigator.cpp" />
+    <ClCompile Include="http_cookies.cpp" />
+    <ClCompile Include="lua_accessor.cpp" />
+    <ClCompile Include="random_generator.cpp" />
+    <ClCompile Include="securities_session.cpp" />
+    <ClCompile Include="securities_session_sbi.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugSecure|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugSecure|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="stock_ordering_manager.cpp" />
+    <ClCompile Include="stock_portfolio.cpp" />
+    <ClCompile Include="stock_trading_command.cpp" />
+    <ClCompile Include="stock_trading_machine.cpp" />
+    <ClCompile Include="stock_trading_starter.cpp" />
+    <ClCompile Include="stock_trading_starter_sbi.cpp" />
+    <ClCompile Include="stock_trading_tactics.cpp" />
+    <ClCompile Include="trade_assistant_setting.cpp" />
+    <ClCompile Include="trade_assistor.cpp" />
+    <ClCompile Include="trade_struct.cpp" />
+    <ClCompile Include="trading_machine.cpp" />
+    <ClCompile Include="utility_datetime.cpp" />
+    <ClCompile Include="utility_debug.cpp" />
+    <ClCompile Include="utility_http.cpp" />
+    <ClCompile Include="utility_python.cpp" />
+    <ClCompile Include="utility_string.cpp" />
+    <ClCompile Include="win_main.cpp" />
+    <ClCompile Include="win_main_struct.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="trade_assistant.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="small.ico" />
+    <Image Include="trade_assistant.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.2.9.1\build\native\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.targets" Condition="Exists('packages\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.2.9.1\build\native\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="packages\boost.1.64.0.0\build\native\boost.targets" Condition="Exists('packages\boost.1.64.0.0\build\native\boost.targets')" />
+    <Import Project="packages\boost_atomic-vc120.1.64.0.0\build\native\boost_atomic-vc120.targets" Condition="Exists('packages\boost_atomic-vc120.1.64.0.0\build\native\boost_atomic-vc120.targets')" />
+    <Import Project="packages\boost_bzip2-vc120.1.64.0.0\build\native\boost_bzip2-vc120.targets" Condition="Exists('packages\boost_bzip2-vc120.1.64.0.0\build\native\boost_bzip2-vc120.targets')" />
+    <Import Project="packages\boost_chrono-vc120.1.64.0.0\build\native\boost_chrono-vc120.targets" Condition="Exists('packages\boost_chrono-vc120.1.64.0.0\build\native\boost_chrono-vc120.targets')" />
+    <Import Project="packages\boost_container-vc120.1.64.0.0\build\native\boost_container-vc120.targets" Condition="Exists('packages\boost_container-vc120.1.64.0.0\build\native\boost_container-vc120.targets')" />
+    <Import Project="packages\boost_context-vc120.1.64.0.0\build\native\boost_context-vc120.targets" Condition="Exists('packages\boost_context-vc120.1.64.0.0\build\native\boost_context-vc120.targets')" />
+    <Import Project="packages\boost_coroutine-vc120.1.64.0.0\build\native\boost_coroutine-vc120.targets" Condition="Exists('packages\boost_coroutine-vc120.1.64.0.0\build\native\boost_coroutine-vc120.targets')" />
+    <Import Project="packages\boost_date_time-vc120.1.64.0.0\build\native\boost_date_time-vc120.targets" Condition="Exists('packages\boost_date_time-vc120.1.64.0.0\build\native\boost_date_time-vc120.targets')" />
+    <Import Project="packages\boost_filesystem-vc120.1.64.0.0\build\native\boost_filesystem-vc120.targets" Condition="Exists('packages\boost_filesystem-vc120.1.64.0.0\build\native\boost_filesystem-vc120.targets')" />
+    <Import Project="packages\boost_graph-vc120.1.64.0.0\build\native\boost_graph-vc120.targets" Condition="Exists('packages\boost_graph-vc120.1.64.0.0\build\native\boost_graph-vc120.targets')" />
+    <Import Project="packages\boost_iostreams-vc120.1.64.0.0\build\native\boost_iostreams-vc120.targets" Condition="Exists('packages\boost_iostreams-vc120.1.64.0.0\build\native\boost_iostreams-vc120.targets')" />
+    <Import Project="packages\boost_locale-vc120.1.64.0.0\build\native\boost_locale-vc120.targets" Condition="Exists('packages\boost_locale-vc120.1.64.0.0\build\native\boost_locale-vc120.targets')" />
+    <Import Project="packages\boost_log-vc120.1.64.0.0\build\native\boost_log-vc120.targets" Condition="Exists('packages\boost_log-vc120.1.64.0.0\build\native\boost_log-vc120.targets')" />
+    <Import Project="packages\boost_log_setup-vc120.1.64.0.0\build\native\boost_log_setup-vc120.targets" Condition="Exists('packages\boost_log_setup-vc120.1.64.0.0\build\native\boost_log_setup-vc120.targets')" />
+    <Import Project="packages\boost_math_c99-vc120.1.64.0.0\build\native\boost_math_c99-vc120.targets" Condition="Exists('packages\boost_math_c99-vc120.1.64.0.0\build\native\boost_math_c99-vc120.targets')" />
+    <Import Project="packages\boost_math_c99f-vc120.1.64.0.0\build\native\boost_math_c99f-vc120.targets" Condition="Exists('packages\boost_math_c99f-vc120.1.64.0.0\build\native\boost_math_c99f-vc120.targets')" />
+    <Import Project="packages\boost_math_c99l-vc120.1.64.0.0\build\native\boost_math_c99l-vc120.targets" Condition="Exists('packages\boost_math_c99l-vc120.1.64.0.0\build\native\boost_math_c99l-vc120.targets')" />
+    <Import Project="packages\boost_math_tr1-vc120.1.64.0.0\build\native\boost_math_tr1-vc120.targets" Condition="Exists('packages\boost_math_tr1-vc120.1.64.0.0\build\native\boost_math_tr1-vc120.targets')" />
+    <Import Project="packages\boost_math_tr1f-vc120.1.64.0.0\build\native\boost_math_tr1f-vc120.targets" Condition="Exists('packages\boost_math_tr1f-vc120.1.64.0.0\build\native\boost_math_tr1f-vc120.targets')" />
+    <Import Project="packages\boost_math_tr1l-vc120.1.64.0.0\build\native\boost_math_tr1l-vc120.targets" Condition="Exists('packages\boost_math_tr1l-vc120.1.64.0.0\build\native\boost_math_tr1l-vc120.targets')" />
+    <Import Project="packages\boost_prg_exec_monitor-vc120.1.64.0.0\build\native\boost_prg_exec_monitor-vc120.targets" Condition="Exists('packages\boost_prg_exec_monitor-vc120.1.64.0.0\build\native\boost_prg_exec_monitor-vc120.targets')" />
+    <Import Project="packages\boost_program_options-vc120.1.64.0.0\build\native\boost_program_options-vc120.targets" Condition="Exists('packages\boost_program_options-vc120.1.64.0.0\build\native\boost_program_options-vc120.targets')" />
+    <Import Project="packages\boost_python-vc120.1.64.0.0\build\native\boost_python-vc120.targets" Condition="Exists('packages\boost_python-vc120.1.64.0.0\build\native\boost_python-vc120.targets')" />
+    <Import Project="packages\boost_python3-vc120.1.64.0.0\build\native\boost_python3-vc120.targets" Condition="Exists('packages\boost_python3-vc120.1.64.0.0\build\native\boost_python3-vc120.targets')" />
+    <Import Project="packages\boost_random-vc120.1.64.0.0\build\native\boost_random-vc120.targets" Condition="Exists('packages\boost_random-vc120.1.64.0.0\build\native\boost_random-vc120.targets')" />
+    <Import Project="packages\boost_regex-vc120.1.64.0.0\build\native\boost_regex-vc120.targets" Condition="Exists('packages\boost_regex-vc120.1.64.0.0\build\native\boost_regex-vc120.targets')" />
+    <Import Project="packages\boost_serialization-vc120.1.64.0.0\build\native\boost_serialization-vc120.targets" Condition="Exists('packages\boost_serialization-vc120.1.64.0.0\build\native\boost_serialization-vc120.targets')" />
+    <Import Project="packages\boost_signals-vc120.1.64.0.0\build\native\boost_signals-vc120.targets" Condition="Exists('packages\boost_signals-vc120.1.64.0.0\build\native\boost_signals-vc120.targets')" />
+    <Import Project="packages\boost_system-vc120.1.64.0.0\build\native\boost_system-vc120.targets" Condition="Exists('packages\boost_system-vc120.1.64.0.0\build\native\boost_system-vc120.targets')" />
+    <Import Project="packages\boost_thread-vc120.1.64.0.0\build\native\boost_thread-vc120.targets" Condition="Exists('packages\boost_thread-vc120.1.64.0.0\build\native\boost_thread-vc120.targets')" />
+    <Import Project="packages\boost_timer-vc120.1.64.0.0\build\native\boost_timer-vc120.targets" Condition="Exists('packages\boost_timer-vc120.1.64.0.0\build\native\boost_timer-vc120.targets')" />
+    <Import Project="packages\boost_type_erasure-vc120.1.64.0.0\build\native\boost_type_erasure-vc120.targets" Condition="Exists('packages\boost_type_erasure-vc120.1.64.0.0\build\native\boost_type_erasure-vc120.targets')" />
+    <Import Project="packages\boost_unit_test_framework-vc120.1.64.0.0\build\native\boost_unit_test_framework-vc120.targets" Condition="Exists('packages\boost_unit_test_framework-vc120.1.64.0.0\build\native\boost_unit_test_framework-vc120.targets')" />
+    <Import Project="packages\boost_wave-vc120.1.64.0.0\build\native\boost_wave-vc120.targets" Condition="Exists('packages\boost_wave-vc120.1.64.0.0\build\native\boost_wave-vc120.targets')" />
+    <Import Project="packages\boost_wserialization-vc120.1.64.0.0\build\native\boost_wserialization-vc120.targets" Condition="Exists('packages\boost_wserialization-vc120.1.64.0.0\build\native\boost_wserialization-vc120.targets')" />
+    <Import Project="packages\boost_zlib-vc120.1.64.0.0\build\native\boost_zlib-vc120.targets" Condition="Exists('packages\boost_zlib-vc120.1.64.0.0\build\native\boost_zlib-vc120.targets')" />
+    <Import Project="packages\boost_exception-vc120.1.64.0.0\build\native\boost_exception-vc120.targets" Condition="Exists('packages\boost_exception-vc120.1.64.0.0\build\native\boost_exception-vc120.targets')" />
+    <Import Project="packages\boost_test_exec_monitor-vc120.1.64.0.0\build\native\boost_test_exec_monitor-vc120.targets" Condition="Exists('packages\boost_test_exec_monitor-vc120.1.64.0.0\build\native\boost_test_exec_monitor-vc120.targets')" />
+    <Import Project="packages\boost-vc120.1.64.0.0\build\native\boost-vc120.targets" Condition="Exists('packages\boost-vc120.1.64.0.0\build\native\boost-vc120.targets')" />
+  </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>このプロジェクトは、このコンピューターにはない NuGet パッケージを参照しています。これらをダウンロードするには、NuGet パッケージの復元を有効にしてください。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。不足しているファイルは {0} です。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.2.9.1\build\native\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.2.9.1\build\native\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.targets'))" />
+    <Error Condition="!Exists('packages\boost.1.64.0.0\build\native\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost.1.64.0.0\build\native\boost.targets'))" />
+    <Error Condition="!Exists('packages\boost_atomic-vc120.1.64.0.0\build\native\boost_atomic-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_atomic-vc120.1.64.0.0\build\native\boost_atomic-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_bzip2-vc120.1.64.0.0\build\native\boost_bzip2-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_bzip2-vc120.1.64.0.0\build\native\boost_bzip2-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_chrono-vc120.1.64.0.0\build\native\boost_chrono-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_chrono-vc120.1.64.0.0\build\native\boost_chrono-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_container-vc120.1.64.0.0\build\native\boost_container-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_container-vc120.1.64.0.0\build\native\boost_container-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_context-vc120.1.64.0.0\build\native\boost_context-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_context-vc120.1.64.0.0\build\native\boost_context-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_coroutine-vc120.1.64.0.0\build\native\boost_coroutine-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_coroutine-vc120.1.64.0.0\build\native\boost_coroutine-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_date_time-vc120.1.64.0.0\build\native\boost_date_time-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_date_time-vc120.1.64.0.0\build\native\boost_date_time-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_filesystem-vc120.1.64.0.0\build\native\boost_filesystem-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_filesystem-vc120.1.64.0.0\build\native\boost_filesystem-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_graph-vc120.1.64.0.0\build\native\boost_graph-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_graph-vc120.1.64.0.0\build\native\boost_graph-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_iostreams-vc120.1.64.0.0\build\native\boost_iostreams-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_iostreams-vc120.1.64.0.0\build\native\boost_iostreams-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_locale-vc120.1.64.0.0\build\native\boost_locale-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_locale-vc120.1.64.0.0\build\native\boost_locale-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_log-vc120.1.64.0.0\build\native\boost_log-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_log-vc120.1.64.0.0\build\native\boost_log-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_log_setup-vc120.1.64.0.0\build\native\boost_log_setup-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_log_setup-vc120.1.64.0.0\build\native\boost_log_setup-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_math_c99-vc120.1.64.0.0\build\native\boost_math_c99-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_math_c99-vc120.1.64.0.0\build\native\boost_math_c99-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_math_c99f-vc120.1.64.0.0\build\native\boost_math_c99f-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_math_c99f-vc120.1.64.0.0\build\native\boost_math_c99f-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_math_c99l-vc120.1.64.0.0\build\native\boost_math_c99l-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_math_c99l-vc120.1.64.0.0\build\native\boost_math_c99l-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_math_tr1-vc120.1.64.0.0\build\native\boost_math_tr1-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_math_tr1-vc120.1.64.0.0\build\native\boost_math_tr1-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_math_tr1f-vc120.1.64.0.0\build\native\boost_math_tr1f-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_math_tr1f-vc120.1.64.0.0\build\native\boost_math_tr1f-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_math_tr1l-vc120.1.64.0.0\build\native\boost_math_tr1l-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_math_tr1l-vc120.1.64.0.0\build\native\boost_math_tr1l-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_prg_exec_monitor-vc120.1.64.0.0\build\native\boost_prg_exec_monitor-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_prg_exec_monitor-vc120.1.64.0.0\build\native\boost_prg_exec_monitor-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_program_options-vc120.1.64.0.0\build\native\boost_program_options-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_program_options-vc120.1.64.0.0\build\native\boost_program_options-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_python-vc120.1.64.0.0\build\native\boost_python-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_python-vc120.1.64.0.0\build\native\boost_python-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_python3-vc120.1.64.0.0\build\native\boost_python3-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_python3-vc120.1.64.0.0\build\native\boost_python3-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_random-vc120.1.64.0.0\build\native\boost_random-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_random-vc120.1.64.0.0\build\native\boost_random-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_regex-vc120.1.64.0.0\build\native\boost_regex-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_regex-vc120.1.64.0.0\build\native\boost_regex-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_serialization-vc120.1.64.0.0\build\native\boost_serialization-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_serialization-vc120.1.64.0.0\build\native\boost_serialization-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_signals-vc120.1.64.0.0\build\native\boost_signals-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_signals-vc120.1.64.0.0\build\native\boost_signals-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_system-vc120.1.64.0.0\build\native\boost_system-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_system-vc120.1.64.0.0\build\native\boost_system-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_thread-vc120.1.64.0.0\build\native\boost_thread-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_thread-vc120.1.64.0.0\build\native\boost_thread-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_timer-vc120.1.64.0.0\build\native\boost_timer-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_timer-vc120.1.64.0.0\build\native\boost_timer-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_type_erasure-vc120.1.64.0.0\build\native\boost_type_erasure-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_type_erasure-vc120.1.64.0.0\build\native\boost_type_erasure-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_unit_test_framework-vc120.1.64.0.0\build\native\boost_unit_test_framework-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_unit_test_framework-vc120.1.64.0.0\build\native\boost_unit_test_framework-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_wave-vc120.1.64.0.0\build\native\boost_wave-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_wave-vc120.1.64.0.0\build\native\boost_wave-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_wserialization-vc120.1.64.0.0\build\native\boost_wserialization-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_wserialization-vc120.1.64.0.0\build\native\boost_wserialization-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_zlib-vc120.1.64.0.0\build\native\boost_zlib-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_zlib-vc120.1.64.0.0\build\native\boost_zlib-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_exception-vc120.1.64.0.0\build\native\boost_exception-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_exception-vc120.1.64.0.0\build\native\boost_exception-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost_test_exec_monitor-vc120.1.64.0.0\build\native\boost_test_exec_monitor-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost_test_exec_monitor-vc120.1.64.0.0\build\native\boost_test_exec_monitor-vc120.targets'))" />
+    <Error Condition="!Exists('packages\boost-vc120.1.64.0.0\build\native\boost-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost-vc120.1.64.0.0\build\native\boost-vc120.targets'))" />
+  </Target>
+</Project>
