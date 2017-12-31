@@ -120,6 +120,9 @@
     <ClInclude Include="utility_debug.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="twitter_session.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -201,6 +204,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="utility_debug.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="twitter_session.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

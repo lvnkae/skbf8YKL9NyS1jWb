@@ -278,6 +278,7 @@
     <ClInclude Include="trade_define.h" />
     <ClInclude Include="trade_struct.h" />
     <ClInclude Include="trading_machine.h" />
+    <ClInclude Include="twitter_session.h" />
     <ClInclude Include="update_message.h" />
     <ClInclude Include="utility_datetime.h" />
     <ClInclude Include="utility_debug.h" />
@@ -316,6 +317,7 @@
     <ClCompile Include="trade_assistor.cpp" />
     <ClCompile Include="trade_struct.cpp" />
     <ClCompile Include="trading_machine.cpp" />
+    <ClCompile Include="twitter_session.cpp" />
     <ClCompile Include="utility_datetime.cpp" />
     <ClCompile Include="utility_debug.cpp" />
     <ClCompile Include="utility_http.cpp" />

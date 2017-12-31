@@ -6,9 +6,10 @@
  */
 #include "trade_assistor.h"
 
-#include "lua_accessor.h"
 #include "stock_trading_machine.h"
 #include "trade_assistant_setting.h"
+
+#include "twitter_session.h"
 
 namespace trading
 {
@@ -27,6 +28,9 @@ private:
     eSequence m_sequence;                       //!< シーケンス
     TradeAssistantSetting m_setting;            //!< 外部設定管理
     std::unique_ptr<TradingMachine> m_pMachine; //!< トレードマシン
+
+    //!< twetterセッション
+    std::shared_ptr<TwitterSessionForAuthor> m_pTwitterSession;
 
 private:
     PIMPL(const PIMPL&);
@@ -61,6 +65,7 @@ public:
     : m_sequence(SEQ_NONE)
     , m_setting()
     , m_pMachine()
+    , m_pTwitterSession(new TwitterSessionForAuthor())
     {
     }
 
