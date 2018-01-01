@@ -15,12 +15,17 @@ namespace trading
 /*!
  *  @param  type    命令種別
  *  @param  code    銘柄コード
- *  @param   tid     戦略ID
+ *  @param  name    銘柄名
+ *  @param  tid     戦略ID
  *  @param  gid     戦略内グループID
  */
-StockTradingCommand::StockTradingCommand(StockTradingCommand::eType type, const StockCode& code, int32_t tid, int32_t gid)
+StockTradingCommand::StockTradingCommand(StockTradingCommand::eType type,
+                                         const StockCode& code,
+                                         const std::wstring& name,
+                                         int32_t tid, int32_t gid)
 : m_type(type)
 , m_code(code.GetCode())
+, m_name(name)
 , m_tactics_id(tid)
 , m_group_id(gid)
 , param0(0)

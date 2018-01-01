@@ -12,6 +12,7 @@
 
 class CipherAES;
 struct HHMMSS;
+class TwitterSessionForAuthor;
 
 namespace trading
 {
@@ -27,10 +28,12 @@ class StockOrderingManager
 {
 public:
     /*!
-     *  @param  session 証券会社とのセッション
+     *  @param  sec_session 証券会社とのセッション
+     *  @param  tw_session  twitterとのセッション
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    StockOrderingManager(const std::shared_ptr<SecuritiesSession>& session,
+    StockOrderingManager(const std::shared_ptr<SecuritiesSession>& sec_session,
+                         const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
                          const TradeAssistantSetting& script_mng);
     /*!
      */

@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+class TwitterSessionForAuthor;
 
 namespace trading
 {
@@ -21,8 +22,9 @@ class StockTradingMachine : public TradingMachine
 public:
     /*!
      *  @param  securities  ØŒ”‰ïĞí•Ê
+     *  @param  tw_session  twitter‚Æ‚ÌƒZƒbƒVƒ‡ƒ“
      */
-    StockTradingMachine(eSecuritiesType securities);
+    StockTradingMachine(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session);
     /*!
      */
     ~StockTradingMachine();

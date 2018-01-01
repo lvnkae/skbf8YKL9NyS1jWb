@@ -2,7 +2,7 @@
  *  @file   utility_datetime.h
  *  @brief  [common]日時関連Utility
  *  @date   2017/12/19
- *  @note   boost::date_time、C++11 に依存している
+ *  @note   boost::date_time に依存している
  */
 #pragma once
 
@@ -62,12 +62,19 @@ void ToTimeFromBoostPosixTime(const boost::posix_time::ptime& src, std::tm& o_tm
  *  @note   起点がどこなのかは不明(普通はシステム起動)
  */
 int64_t GetTickCountGeneral();
+
 /*!
  *  @brief  srcとシステムローカル時間との差を秒[絶対値]で得る
  *  @param  src 比べる時間
  *  @return 秒差
  */
 uint32_t GetDiffSecondsFromLocalMachineTime(const std::tm& src);
+/*!
+ *  @brief  システムローカル時間を文字列で得る
+ *  @param[in]  format  取得形式 (%H:%M:%S など)
+ *  @return 文字列
+ */
+std::wstring GetLocalMachineTime(const std::wstring& format);
 
 /*!
  *  @brief  年月日時分秒に任意ミリ秒を足す
@@ -78,7 +85,7 @@ uint32_t GetDiffSecondsFromLocalMachineTime(const std::tm& src);
 void AddTimeAndDiffMS(const std::tm& base_tm, int64_t diff_ms, std::tm& o_now);
 
 /*!
- *  @brief  after_day後の00:00までの時間をミリ秒で得る
+ *  @brief  指定日時after_day後の00:00までの時間をミリ秒で得る
  *  @param  pt          boost時間インターフェイス
  *  @param  after_day   何日後か(翌日が1)
  *  @return 残り時間(ミリ秒)

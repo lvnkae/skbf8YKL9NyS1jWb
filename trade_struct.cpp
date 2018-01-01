@@ -48,4 +48,19 @@ bool StockTimeTableUnit::SetMode(const std::string& mode_str)
     return true;
 }
 
+/*!
+ *  @param  rcv 注文パラメータ(受信形式)
+ */
+StockOrder::StockOrder(const RcvResponseStockOrder& rcv)
+: m_code(rcv.m_code)
+, m_number(rcv.m_number)
+, m_value(rcv.m_value)
+, m_b_leverage(rcv.m_b_leverage)
+, m_b_market_order(false)
+, m_type(rcv.m_type)
+, m_condition(CONDITION_NONE)
+, m_investiments(rcv.m_investments)
+{
+}
+
 } // namespace trading

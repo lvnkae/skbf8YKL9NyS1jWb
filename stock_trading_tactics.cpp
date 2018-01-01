@@ -196,7 +196,11 @@ void StockTradingTactics::InterpretAtCode(bool b_emergency,
         if (!emg.Judge(hhmmss, valuedata, script_mng)) {
             continue;
         }
-        StockTradingCommand emergency_command(StockTradingCommand::EMERGENCY, s_code, m_unique_id, 0); // GroupID‚È‚µ
+        StockTradingCommand emergency_command(StockTradingCommand::EMERGENCY,
+                                              s_code,
+                                              valuedata.m_name,
+                                              m_unique_id,
+                                              0); // EMERGENCY‚ÍGroupID‚È‚µ
         enqueue_func(m_unique_id, emergency_command);
         b_emergency = true;
         //
@@ -220,7 +224,11 @@ void StockTradingTactics::InterpretAtCode(bool b_emergency,
                                                               valuedata.m_high,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
-        StockTradingCommand order_command(StockTradingCommand::ORDER, s_code, m_unique_id, order.GetGroupID());
+        StockTradingCommand order_command(StockTradingCommand::ORDER,
+                                          s_code,
+                                          valuedata.m_name,
+                                          m_unique_id,
+                                          order.GetGroupID());
         {
             trading::eOrderType otype = order.GetType() == BUY ?ORDER_BUY :ORDER_SELL;
             order_command.SetOrderParam(static_cast<int32_t>(otype),
@@ -251,7 +259,11 @@ void StockTradingTactics::InterpretAtCode(bool b_emergency,
                                                               valuedata.m_high,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
-        StockTradingCommand order_command(StockTradingCommand::ORDER, s_code, m_unique_id, order.GetGroupID());
+        StockTradingCommand order_command(StockTradingCommand::ORDER,
+                                          s_code,
+                                          valuedata.m_name,
+                                          m_unique_id,
+                                          order.GetGroupID());
         {
             trading::eOrderType otype = order.GetType() == BUY ?ORDER_BUY :ORDER_SELL;
             order_command.SetOrderParam(static_cast<int32_t>(otype),

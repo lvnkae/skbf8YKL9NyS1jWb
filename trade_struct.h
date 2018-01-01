@@ -13,6 +13,8 @@
 namespace trading
 {
 
+struct RcvResponseStockOrder;
+
 /*!
  *  @brief  株取引タイムテーブル(一コマ分)
  */
@@ -99,6 +101,11 @@ struct StockTimeTableUnit
     , m_investiments(INVESTMENTS_NONE)
     {
     }
+
+    /*!
+     *  @param  rcv 注文パラメータ(受信形式)
+     */
+    StockOrder(const RcvResponseStockOrder& rcv);
 
     /*!
      *  @brief  注文の正常チェック

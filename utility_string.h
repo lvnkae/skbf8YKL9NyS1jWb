@@ -45,9 +45,17 @@ void ToLower(const std::string& src, std::string& dst);
  *  @brief  倍精度浮動小数を小数点第n位まで文字列に変換
  *  @param  src     入力小数値
  *  @param  order   残す小数点桁数
- *  @param[out] dst 格納先
+ *  @return 文字列
  *  @note   std::to_wstringだと桁数指定ができないので
  */
 std::wstring ToWstringOrder(float64 src, uint32_t order);
+/*!
+ *  @brief  秘匿したいID(数値)を下N桁だけ文字列に変換
+ *  @param  src     ID
+ *  @param  order   表示する下桁数
+ *  @return 文字列
+ *  @note   上位桁は*で埋める
+ */
+std::wstring ToSecuretIDOrder(int32_t src, uint32_t order);
 
 } // namespace utility

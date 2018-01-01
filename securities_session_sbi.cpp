@@ -81,9 +81,10 @@ public:
         {
             m_last_access_tick_mb = utility::GetTickCountGeneral();
             m_cookies_gr.Set(response.headers(), url);
+            utility::string_t date_str(response.headers().date());
             concurrency::streams::istream bodyStream = response.body();
             concurrency::streams::container_buffer<std::string> inStringBuffer;
-            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, uid, pwd, callback](size_t bytesRead)
+            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, uid, pwd, callback](size_t bytesRead)
             {
                 const int INX_RESULT = 0;       // responseLoginMobile実行成否
                 const int INX_LOGIN = 1;        // ログイン成否
@@ -92,7 +93,7 @@ public:
                 bool b_result = boost::python::extract<bool>(t[INX_RESULT]);
                 bool b_login_result = boost::python::extract<bool>(t[INX_LOGIN]);
                 if (!b_result || !b_login_result) {
-                    callback(b_result, b_login_result, false);
+                    callback(b_result, b_login_result, false, date_str);
                     return;
                 }
 
@@ -123,9 +124,10 @@ public:
                 {
                     m_last_access_tick_pc = utility::GetTickCountGeneral();
                     m_cookies_gr.Set(response.headers(), url);
+                    utility::string_t date_str(response.headers().date());
                     concurrency::streams::istream bodyStream = response.body();
                     concurrency::streams::container_buffer<std::string> inStringBuffer;
-                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, callback](size_t bytesRead)
+                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, callback](size_t bytesRead)
                     {
                         const int INX_RESULT = 0;       // responseLoginPC実行成否
                         const int INX_LOGIN = 1;        // ログイン成否
@@ -134,7 +136,8 @@ public:
                             = boost::python::extract<boost::python::tuple>(m_python.attr("responseLoginPC")(inStringBuffer.collection()));
                         callback(boost::python::extract<bool>(t[INX_RESULT]),
                                  boost::python::extract<bool>(t[INX_LOGIN]),
-                                 boost::python::extract<bool>(t[INX_IMPORT_MSG]));
+                                 boost::python::extract<bool>(t[INX_IMPORT_MSG]),
+                                 date_str);
                     });
                 });
             });
@@ -334,7 +337,7 @@ public:
     void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback)
     {
         if (!order.IsValid()) {
-            callback(false, RcvResponseStockOrder());    // 不正注文(error)
+            callback(false, RcvResponseStockOrder(), std::wstring());    // 不正注文(error)
             return;
         }
         // 注文入力 ※regist_id取得
@@ -350,9 +353,10 @@ public:
         {
             m_last_access_tick_mb = utility::GetTickCountGeneral();
             m_cookies_gr.Set(response.headers(), url);
+            utility::string_t date_str(response.headers().date());
             concurrency::streams::istream bodyStream = response.body();
             concurrency::streams::container_buffer<std::string> inStringBuffer;
-            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, url, order, pwd, callback](size_t bytesRead)
+            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, url, order, pwd, callback](size_t bytesRead)
             {
                 // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
                 std::lock_guard<std::recursive_mutex> lock(m_mtx);
@@ -361,7 +365,7 @@ public:
                 const int64_t regist_id
                     = boost::python::extract<int64_t>(m_python.attr("getStockOrderRegistID")(inStringBuffer.collection(), i_order_type));
                 if (regist_id < 0) {
-                    callback(false, RcvResponseStockOrder());
+                    callback(false, RcvResponseStockOrder(), date_str);
                     return;
                 }
 
@@ -379,9 +383,10 @@ public:
                 {
                     m_last_access_tick_mb = utility::GetTickCountGeneral();
                     m_cookies_gr.Set(response.headers(), cf_url);
+                    utility::string_t date_str(response.headers().date());
                     concurrency::streams::istream bodyStream = response.body();
                     concurrency::streams::container_buffer<std::string> inStringBuffer;
-                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, cf_url, order, pwd, callback](size_t bytesRead)
+                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, cf_url, order, pwd, callback](size_t bytesRead)
                     {
                         // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
                         std::lock_guard<std::recursive_mutex> lock(m_mtx);
@@ -390,7 +395,7 @@ public:
                         const int64_t regist_id
                             = boost::python::extract<int64_t>(m_python.attr("getStockOrderConfirmRegistID")(inStringBuffer.collection(), i_order_type));
                         if (regist_id < 0) {
-                            callback(false, RcvResponseStockOrder());
+                            callback(false, RcvResponseStockOrder(), date_str);
                             return;
                         }
 
@@ -407,9 +412,10 @@ public:
                         {
                             m_last_access_tick_mb = utility::GetTickCountGeneral();
                             m_cookies_gr.Set(response.headers(), ex_url);
+                            utility::string_t date_str(response.headers().date());
                             concurrency::streams::istream bodyStream = response.body();
                             concurrency::streams::container_buffer<std::string> inStringBuffer;
-                            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, callback](size_t bytesRead)
+                            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, callback](size_t bytesRead)
                             {
                                 // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
                                 std::lock_guard<std::recursive_mutex> lock(m_mtx);
@@ -426,7 +432,7 @@ public:
                                 rcv_order.m_b_leverage = boost::python::extract<bool>(t[6]);
                                 const int32_t order_type = boost::python::extract<int32_t>(t[7]);
                                 rcv_order.m_type = static_cast<eOrderType>(order_type);
-                                callback(b_result, rcv_order);
+                                callback(b_result, rcv_order, date_str);
                             });
                         });
                     });

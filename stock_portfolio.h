@@ -43,7 +43,7 @@ struct StockPortfolio
     };
 
     StockCode m_code;   //!< 銘柄コード
-    std::string m_name; //!< 銘柄名(utf-8)
+    std::wstring m_name;//!< 銘柄名(utf-16)
     float64 m_open;     //!< 始値
     float64 m_high;     //!< 高値
     float64 m_low;      //!< 安値
@@ -60,7 +60,7 @@ struct StockPortfolio
     , m_value_data()
     {
     }
-    StockPortfolio(uint32_t scode, const std::string& sname)
+    StockPortfolio(uint32_t scode, const std::wstring& sname)
     : m_code(scode)
     , m_name(sname)
     , m_open(0.f)

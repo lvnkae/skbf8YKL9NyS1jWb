@@ -20,11 +20,11 @@ struct RcvResponseStockOrder;
 class SecuritiesSession
 {
 public:
-    typedef std::function<void (bool b_result, bool b_login, bool b_important_msg)> LoginCallback;
+    typedef std::function<void (bool b_result, bool b_login, bool b_important_msg, const std::wstring&)> LoginCallback;
     typedef std::function<void (bool b_result, const std::vector<std::pair<uint32_t, std::string>>&)> CreatePortfolioCallback;
     typedef std::function<void (bool b_result)> TransmitPortfolioCallback;
     typedef std::function<void (bool b_result, const std::wstring&, const std::vector<RcvStockValueData>&)> UpdateValueDataCallback;
-    typedef std::function<void (bool b_result, const RcvResponseStockOrder&)> OrderCallback;
+    typedef std::function<void (bool b_result, const RcvResponseStockOrder&, const std::wstring&)> OrderCallback;
 
     /*!
      *  @brief

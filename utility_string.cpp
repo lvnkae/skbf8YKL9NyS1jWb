@@ -93,5 +93,25 @@ std::wstring ToWstringOrder(float64 src, uint32_t order)
     return dst;
 }
 
+/*!
+ *  @brief  ”é“½‚µ‚½‚¢ID(”’l)‚ð‰ºNŒ…‚¾‚¯•¶Žš—ñ‚É•ÏŠ·
+ *  @param  src     ID
+ *  @param  order   •\Ž¦‚·‚é‰ºŒ…”
+ *  @return •¶Žš—ñ
+ *  @note   ãˆÊŒ…‚Í*‚Å–„‚ß‚é
+ */
+std::wstring ToSecuretIDOrder(int32_t src, uint32_t order)
+{
+    std::wstring dst(std::to_wstring(src));
+    const size_t len = dst.size();
+    if (len > order) {
+        const size_t hide_len = len-order;
+        for (size_t inx = 0; inx < hide_len; inx++) {
+            dst[inx] = L'*';
+        }
+    }
+    return dst;
+}
+
 
 } // namespace utility

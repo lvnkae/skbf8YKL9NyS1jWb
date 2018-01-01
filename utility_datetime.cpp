@@ -99,6 +99,7 @@ void ToTimeFromBoostPosixTime(const boost::posix_time::ptime& src, std::tm& o_tm
     o_tm.tm_isdst = false;
 }
 
+
 /*!
  *  @brief  経過時間を得る
  *  @return tickCount(ミリ秒)
@@ -108,6 +109,8 @@ int64_t GetTickCountGeneral()
     auto time_point = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(time_point.time_since_epoch()).count();
 }
+
+
 /*!
  *  @brief  srcとシステムローカル時間との差を秒[絶対値]で得る
  *  @param  src 比べる時間
@@ -121,6 +124,26 @@ uint32_t GetDiffSecondsFromLocalMachineTime(const std::tm& src)
     int32_t tt_dif = static_cast<int32_t>(tt_lc - tt_src);
     return std::abs(tt_dif);
 }
+/*!
+ *  @brief  システムローカル時間を文字列で得る
+ *  @return 文字列
+ */
+std::wstring GetLocalMachineTime(const std::wstring& format)
+{
+    std::wostringstream ss;
+
+    const time_t tt_lc = std::time(nullptr);
+    std::tm tm_lc;
+#if defined(_WINDOWS)
+    localtime_s(&tm_lc, &tt_lc);
+#else
+    tm_lc = *std::localtime(&tt_lc);
+#endif/* defined(_WINDOWS) */
+    ss << std::put_time(&tm_lc, format.c_str());
+
+    return ss.str();
+}
+
 
 /*!
  *  @brief  base_tmにdiff_msを足しo_nowに出力
@@ -137,11 +160,12 @@ void AddTimeAndDiffMS(const std::tm& base_tm, int64_t diff_ms, std::tm& o_now)
     localtime_s(&o_now, &tt_after);
 #else
     o_now = *std::localtime(&tt_after);
-#endif    
+#endif/* defined(_WINDOWS) */
 }
 
+
 /*!
- *  @brief  after_day後の00:00までの時間をミリ秒で得る
+ *  @brief  指定日時after_day後の00:00までの時間をミリ秒で得る
  *  @param  pt          boost時間インターフェイス
  *  @param  after_day   何日後か
  *  @note   mktimeもlocaltimeもローカルタイム処理
@@ -161,7 +185,7 @@ int64_t GetAfterDayLimitMS(const boost::posix_time::ptime& pt, int32_t after_day
     localtime_s(&after_tm, &after_tt);
 #else
     std::tm after_tm = *std::localtime(&after_tt);
-#endif
+#endif/* defined(_WINDOWS) */
     {
         after_tm.tm_sec = 0;
         after_tm.tm_min = 0;
@@ -189,7 +213,9 @@ int64_t ToMiliSecondsFromSecond(int32_t second)
     return static_cast<int64_t>(second)*MILISECONDS_OF_1SECOND;
 }
 
+
 } // namespace utility
+
 
 /*!
  *  @brief  00:00:00からの経過秒数を得る

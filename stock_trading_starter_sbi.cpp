@@ -10,6 +10,7 @@
 
 #include "cipher_aes.h"
 #include "random_generator.h"
+#include "twitter_session.h"
 #include "utility_datetime.h"
 
 namespace trading
@@ -25,10 +26,12 @@ private:
         SEQ_READY,  //!< 準備OK
     };
 
-    const int64_t m_session_keep_ms;                    //!< セッションを維持できる時間(ms)
-    std::shared_ptr<SecuritiesSession> m_pSession;      //!< セッション
-    eSequence m_sequence;                               //!< シーケンス
-    eStockInvestmentsType m_last_portfolior_investments;//!< 最後に作ったポートフォリオの対象取引所種別
+    const int64_t m_session_keep_ms;                        //!< 証券会社とのセッションを無アクセスで維持できる時間(ms)
+    std::shared_ptr<SecuritiesSession> m_pSecSession;       //!< 証券会社とのセッション
+    std::shared_ptr<TwitterSessionForAuthor> m_pTwSession;  //!< twitterとのセッション(メッセージ通知用)
+
+    eSequence m_sequence;                                   //!< シーケンス
+    eStockInvestmentsType m_last_portfolior_investments;    //!< 最後に作ったポートフォリオの対象取引所種別
 
     /*!
      *  @brief  ポートフォリオ作成
@@ -41,19 +44,19 @@ private:
                          const InitPortfolioFunc& init_portfolio)
     {
         if (m_last_portfolior_investments != investments_type) {
-            m_pSession->CreatePortfolio(monitoring_code,
-                                        investments_type,
-                                        [this, 
-                                         investments_type,
-                                         init_portfolio](bool b_result,
-                                                         const std::vector<std::pair<uint32_t, std::string>>& rcv_portfolio)
+            m_pSecSession->CreatePortfolio(monitoring_code,
+                                           investments_type,
+                                           [this, 
+                                            investments_type,
+                                            init_portfolio](bool b_result,
+                                                            const std::vector<std::pair<uint32_t, std::string>>& rcv_portfolio)
             {
                 bool b_valid = false;
                 if (b_result) {
                     b_valid = init_portfolio(investments_type, rcv_portfolio);
                 }
                 if (b_valid) {
-                    m_pSession->TransmitPortfolio([this](bool b_result)
+                    m_pSecSession->TransmitPortfolio([this](bool b_result)
                     {
                         if (b_result) {
                             m_sequence = SEQ_READY;
@@ -75,12 +78,16 @@ private:
 
 public:
     /*!
-     *  @param  session     証券会社とのセッション
+     *  @param  sec_session 証券会社とのセッション
+     *  @param  tw_session  twitterとのセッション
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    PIMPL(const std::shared_ptr<SecuritiesSession>& session, const TradeAssistantSetting& script_mng)
+    PIMPL(const std::shared_ptr<SecuritiesSession>& sec_session,
+          const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+          const TradeAssistantSetting& script_mng)
     : m_session_keep_ms(utility::ToMiliSecondsFromMinute(script_mng.GetSessionKeepMinute()))
-    , m_pSession(session)
+    , m_pSecSession(sec_session)
+    , m_pTwSession(tw_session)
     , m_sequence(SEQ_NONE)
     , m_last_portfolior_investments(INVESTMENTS_NONE)
     {
@@ -116,27 +123,30 @@ public:
             return false; // 開始処理中
         }
 
-        const int64_t diff_tick = tickCount - m_pSession->GetLastAccessTime();
+        const int64_t diff_tick = tickCount - m_pSecSession->GetLastAccessTime();
         if (diff_tick > m_session_keep_ms) {
             // SBIへの最終アクセスからの経過時間がセッション維持時間を超えていたらログイン実行
             std::wstring uid, pwd;
             aes_uid.Decrypt(uid);
             aes_pwd.Decrypt(pwd);
-            m_pSession->Login(uid, pwd, [this,
-                                         monitoring_code,
-                                         investments_type,
-                                         init_portfolio](bool b_result, bool b_login, bool b_important_msg)
+            m_pSecSession->Login(uid, pwd,
+                                 [this, monitoring_code,
+                                        investments_type,
+                                        init_portfolio](bool b_result,
+                                                        bool b_login,
+                                                        bool b_important_msg,
+                                                        const std::wstring& sv_date)
             {
                 if (!b_result) {
-                    // >ToDo< エラー発生時の処理(サイトの構成変更、緊急メンテナンスなど)
-                    // twitter通知
+                    m_pTwSession->Tweet(sv_date, L"ログインエラー。緊急メンテナンス中かもしれません。");
                 } else if (!b_login) {
-                    // >ToDo< ログイン失敗時の処理(USERID/PASSWORD違い)
-                    // 再入力を促す(twitter通知/トレード開始ボタン復活、machineシーケンスリセット)
+                    m_pTwSession->Tweet(sv_date, L"ログインできませんでした。IDまたはパスワードが違います。");
+                    // >ToDo< 再入力できるようにする(トレード開始ボタン復活、machineシーケンスリセット)
                 } else {
                     if (b_important_msg) {
-                        // >ToDo< PCサイトに「重要なお知らせ」が来ていた場合の処理
-                        // twitterへ送ってメッセージ確認を促す
+                        m_pTwSession->Tweet(sv_date, L"ログインしました。SBIからの重要なお知らせがあります。");
+                    } else {
+                        m_pTwSession->Tweet(sv_date, L"ログインしました");
                     }
                     // ポートフォリオ作成
                     CreatePortfolio(monitoring_code, investments_type, init_portfolio);
@@ -151,13 +161,15 @@ public:
 };
 
 /*!
- *  @param  session     証券会社とのセッション
+ *  @param  sec_session 証券会社とのセッション
+ *  @param  tw_session  twitterとのセッション
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
-StockTradingStarterSbi::StockTradingStarterSbi(const std::shared_ptr<SecuritiesSession>& session,
+StockTradingStarterSbi::StockTradingStarterSbi(const std::shared_ptr<SecuritiesSession>& sec_session,
+                                               const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
                                                const TradeAssistantSetting& script_mng)
 : StockTradingStarter()
-, m_pImpl(new PIMPL(session, script_mng))
+, m_pImpl(new PIMPL(sec_session, tw_session, script_mng))
 {
 }
 /*!

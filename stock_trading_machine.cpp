@@ -17,6 +17,7 @@
 #include "holiday_investigator.h"
 #include "random_generator.h"
 #include "update_message.h"
+#include "twitter_session.h"
 #include "utility_datetime.h"
 #include "yymmdd.h"
 
@@ -44,7 +45,8 @@ private:
     eSequence m_sequence;   //!< シーケンス
 
     eSecuritiesType m_securities;                               //!< 証券会社種別
-    std::shared_ptr<SecuritiesSession> m_pSession;              //!< 証券会社とのセッション
+    std::shared_ptr<SecuritiesSession> m_pSecSession;           //!< 証券会社とのセッション
+    std::shared_ptr<TwitterSessionForAuthor> m_pTwSession;      //!< twitterとのセッション(メッセージ通知用)
     std::unique_ptr<StockTradingStarter> m_pStarter;            //!< 株取引スターター
     std::unique_ptr<StockOrderingManager> m_pOrderingManager;   //!< 発注管理者
     std::unique_ptr<HolidayInvestigator> m_pHolidayInvestigator;//!< 休日調査官
@@ -103,9 +105,9 @@ private:
         switch (m_securities)
         {
         case SEC_SBI:
-            m_pSession.reset(new SecuritiesSessionSbi(script_mng));
-            m_pStarter.reset(new StockTradingStarterSbi(m_pSession, script_mng));
-            m_pOrderingManager.reset(new StockOrderingManager(m_pSession, script_mng));
+            m_pSecSession.reset(new SecuritiesSessionSbi(script_mng));
+            m_pStarter.reset(new StockTradingStarterSbi(m_pSecSession, m_pTwSession, script_mng));
+            m_pOrderingManager.reset(new StockOrderingManager(m_pSecSession, m_pTwSession, script_mng));
             m_sequence = SEQ_READY;
             break;
         default:
@@ -243,7 +245,10 @@ private:
                 if ((tickCount - m_last_monitor_tick) > intv_ms) {
                     m_last_monitor_tick = tickCount;
                     // 取得要求
-                    m_pSession->UpdateValueData([this, investments_type](bool b_success, const std::wstring& sendtime, const std::vector<RcvStockValueData>& rcv_valuedata) {
+                    m_pSecSession->UpdateValueData([this,
+                                                    investments_type](bool b_success,
+                                                                      const std::wstring& sendtime,
+                                                                      const std::vector<RcvStockValueData>& rcv_valuedata) {
                         if (b_success) {
                             UpdateValueData(investments_type, sendtime, rcv_valuedata);
                         }
@@ -348,7 +353,9 @@ private:
                 return rcv_pf_unit.first == code;
             });
             if (it != rcv_portfolio.end()) {
-                portfolio.emplace_back(code, it->second);
+                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
+                std::wstring name(std::move(utfconv.from_bytes(it->second)));
+                portfolio.emplace_back(code, name);
             } else {
                 return false;
             }
@@ -381,11 +388,13 @@ private:
 public:
     /*!
      *  @param  securities  証券会社種別
+     *  @param  tw_session  twitterとのセッション
      */
-    PIMPL(eSecuritiesType securities)
+    PIMPL(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session)
     : m_sequence(SEQ_INITIALIZE)
     , m_securities(securities)
-    , m_pSession()
+    , m_pSecSession()
+    , m_pTwSession(tw_session)
     , m_pStarter()
     , m_pOrderingManager()
     , m_pHolidayInvestigator()
@@ -467,10 +476,11 @@ public:
 
 /*!
  *  @param  securities  証券会社種別
+ *  @param  tw_session  twitterとのセッション
  */
-StockTradingMachine::StockTradingMachine(eSecuritiesType securities)
+StockTradingMachine::StockTradingMachine(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session)
 : TradingMachine()
-, m_pImpl(new PIMPL(securities))
+, m_pImpl(new PIMPL(securities, tw_session))
 {
 }
 /*!

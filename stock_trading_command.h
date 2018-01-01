@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <string>
+
 namespace trading
 {
 
@@ -27,8 +29,13 @@ public:
     };
 
     /*!
+     *  @param  type    命令種別
+     *  @param  code    銘柄コード
+     *  @param  name    銘柄名
+     *  @param  tid     戦略ID
+     *  @param  gid     戦略内グループID
      */
-    StockTradingCommand(eType type, const StockCode& code, int32_t tid, int32_t gid);
+    StockTradingCommand(eType type, const StockCode& code, const std::wstring& name, int32_t tid, int32_t gid);
     /*!
      *  @brief  発注価格設定
      */
@@ -53,6 +60,10 @@ public:
      *  @brief  銘柄コードを得る
      */
     uint32_t GetCode() const { return m_code; }
+    /*!
+     *  @brief  銘柄名(utf-16)を得る
+     */
+    const std::wstring& GetName() const { return m_name; }
     /*!
      *  @brief  戦略IDを得る
      */
@@ -90,6 +101,7 @@ public:
 private:
     eType m_type;           //!< 命令種別
     uint32_t m_code;        //!< 銘柄コード
+    std::wstring m_name;    //!< 銘柄名(メッセージ用/utf-16)
     int32_t m_tactics_id;   //!< 所属戦略ID
     int32_t m_group_id;     //!< 戦略内グループID
 

@@ -52,7 +52,7 @@ private:
         {
         case trading::TYPE_STOCK:
             // Š””„”ƒMachineì¬
-            m_pMachine.reset(new StockTradingMachine(m_setting.GetSecuritiesType()));
+            m_pMachine.reset(new StockTradingMachine(m_setting.GetSecuritiesType(), m_pTwitterSession));
             m_sequence = SEQ_COMPSETTING;
             break;
         default:
