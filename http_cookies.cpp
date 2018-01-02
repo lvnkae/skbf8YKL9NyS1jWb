@@ -6,9 +6,11 @@
 #include "http_cookies.h"
 
 #include "boost/algorithm/string.hpp"
+#include "cpprest/base_uri.h"
 #include "cpprest/http_headers.h"
 #include "utility_http.h"
 #include "utility_string.h"
+#include <codecvt>
 
 const wchar_t COOKIE_OBJ_DELIMITER[] = L";";
 const wchar_t COOKIE_OBJ_DELIMITER_SUB[] = L",";
@@ -78,15 +80,15 @@ void web::http::cookies::Get(std::wstring& dst) const
  */
 void web::http::cookies_group::Set(const web::http::http_headers& headers, const std::string& url)
 {
-    std::string domain;
-    utility::GetDomainFromURL(url, domain);
-    web::http::cookies& elem = m_cookies[domain];
-    elem.Set(headers);
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
+    const std::wstring url_t(std::move(utfconv.from_bytes(url)));
+    Set(headers, url_t);
 }
-void web::http::cookies_group::Set(const web::http::http_headers& headers, const std::wstring& urlT)
+void web::http::cookies_group::Set(const web::http::http_headers& headers, const std::wstring& url_t)
 {
+    const std::wstring enc_url(std::move(web::uri::encode_uri(url_t, web::uri::components::host)));
     std::string domain;
-    utility::GetDomainFromURL(urlT, domain);
+    utility::GetDomainFromURL(enc_url, domain);
     web::http::cookies& elem = m_cookies[domain];
     elem.Set(headers);
 }
@@ -98,19 +100,15 @@ void web::http::cookies_group::Set(const web::http::http_headers& headers, const
  */
 void web::http::cookies_group::Get(const std::string& url, std::wstring& dst) const
 {
-    std::string domain;
-    utility::GetDomainFromURL(url, domain);
-    std::unordered_map<std::string, web::http::cookies>::const_iterator it = m_cookies.find(domain);
-    if (it != m_cookies.end()) {
-        it->second.Get(dst);
-    } else {
-        dst.swap(std::wstring());
-    }
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
+    const std::wstring url_t(std::move(utfconv.from_bytes(url)));
+    Get(url_t, dst);
 }
-void web::http::cookies_group::Get(const std::wstring& url, std::wstring& dst) const
+void web::http::cookies_group::Get(const std::wstring& url_t, std::wstring& dst) const
 {
+    const std::wstring enc_url(std::move(web::uri::encode_uri(url_t, web::uri::components::host)));
     std::string domain;
-    utility::GetDomainFromURL(url, domain);
+    utility::GetDomainFromURL(enc_url, domain);
     std::unordered_map<std::string, web::http::cookies>::const_iterator it = m_cookies.find(domain);
     if (it != m_cookies.end()) {
         it->second.Get(dst);

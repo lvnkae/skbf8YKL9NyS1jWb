@@ -48,7 +48,6 @@ public:
 /*!
  *  @brief  cookie_groupクラス
  *  @note   ドメインをキーに複数のcookieを束ねたもの
- *  @note   半角英数記号ドメインのみ対応(それ以外は正規化時に捨てられる)
  */
 class cookies_group
 {
@@ -61,17 +60,19 @@ public:
      *  @brief  http_headersからcookieを取り出してセット
      *  @param  headers ResponseHeaders
      *  @param  url     送信元URL(headersが保持してくれてれば楽だったのに…)
+     *  @note   入力URLはutf-8(string)かutf-16(wstring)
      */
     void Set(const web::http::http_headers& headers, const std::string& url);
-    void Set(const web::http::http_headers& headers, const std::wstring& urlT);
+    void Set(const web::http::http_headers& headers, const std::wstring& url_t);
     /*!
      *  @brief  cookieを連結した一つの文字列として取得する
      *  @param[in]  url 送信先URL
      *  @param[out] dst 格納先
      *  @note   RequestHeadersに設定するcookie文字列を得る
+     *  @note   入力URLはutf-8(string)かutf-16(wstring)
      */
     void Get(const std::string& url, std::wstring& dst) const;
-    void Get(const std::wstring& url, std::wstring& dst) const;
+    void Get(const std::wstring& url_t, std::wstring& dst) const;
 
     cookies_group()
     : m_cookies()
