@@ -8,6 +8,8 @@
 #include "trade_define.h"
 #include <functional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace trading
@@ -21,7 +23,7 @@ class SecuritiesSession
 {
 public:
     typedef std::function<void (bool b_result, bool b_login, bool b_important_msg, const std::wstring&)> LoginCallback;
-    typedef std::function<void (bool b_result, const std::vector<std::pair<uint32_t, std::string>>&)> CreatePortfolioCallback;
+    typedef std::function<void (bool b_result, const std::unordered_map<uint32_t, std::wstring>&)> CreatePortfolioCallback;
     typedef std::function<void (bool b_result)> TransmitPortfolioCallback;
     typedef std::function<void (bool b_result, const std::wstring&, const std::vector<RcvStockValueData>&)> UpdateValueDataCallback;
     typedef std::function<void (bool b_result, const RcvResponseStockOrder&, const std::wstring&)> OrderCallback;
@@ -49,7 +51,7 @@ public:
      *  @param  investments_type    株取引所種別
      *  @param  callback            コールバック
      */
-    virtual void CreatePortfolio(const std::vector<uint32_t>& monitoring_code,
+    virtual void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
                                  eStockInvestmentsType investments_type,
                                  const CreatePortfolioCallback& callback) = 0;
     /*!
@@ -70,6 +72,21 @@ public:
      *  @param  callback    コールバック
      */
     virtual void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) = 0;
+    /*!
+     *  @brief  注文訂正
+     *  @param  order_id    注文番号(管理用)
+     *  @param  order       注文情報
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    virtual void CorrectOrder(int32_t order_id, const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) = 0;
+    /*!
+     *  @brief  注文取消
+     *  @param  order_id    注文番号(管理用)
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    virtual void CancelOrder(int32_t order_id, const std::wstring& pwd, const OrderCallback& callback) = 0;
 
     /*!
      *  @brief  保有株式情報更新

@@ -7,9 +7,11 @@
  */
 #pragma once
 
+#include "trade_define.h"
+
 #include <memory>
 #include <vector>
-#include "trade_define.h"
+#include <unordered_map>
 
 struct MMDD;
 class UpdateMessage;
@@ -84,10 +86,13 @@ public:
      *  @brief  株取引戦略データ構築
      *  @param[out] o_message
      *  @param[out] o_tactics   戦略データ格納先
+     *  @param[out] o_link      紐付け情報格納先
      *  @retval true    成功
      *  @note   luaにアクセスする都合上constにできない
      */
-    bool BuildStockTactics(UpdateMessage& o_message, std::vector<StockTradingTactics>& o_tactics);
+    bool BuildStockTactics(UpdateMessage& o_message,
+                           std::unordered_map<int32_t, StockTradingTactics>& o_tactics,
+                           std::vector<std::pair<uint32_t, int32_t>>& o_link);
 
     /*!
      *  @brief  判定スクリプト関数呼び出し

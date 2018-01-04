@@ -7,9 +7,7 @@
 
 #include "securities_session_sbi.h"
 #include "stock_ordering_manager.h"
-#include "stock_portfolio.h"
 #include "stock_trading_starter_sbi.h"
-#include "stock_trading_tactics.h"
 #include "trade_assistant_setting.h"
 #include "trade_struct.h"
 
@@ -23,7 +21,6 @@
 
 #include <codecvt>
 #include <mutex>
-#include <unordered_map>
 
 namespace trading
 {
@@ -51,10 +48,10 @@ private:
     std::unique_ptr<StockOrderingManager> m_pOrderingManager;   //!< 発注管理者
     std::unique_ptr<HolidayInvestigator> m_pHolidayInvestigator;//!< 休日調査官
 
-    std::vector<MMDD> m_jpx_holiday;                //!< JPX固有休業日(土日祝でなくとも休みになる日)
-    std::vector<StockTimeTableUnit> m_timetable;    //!< 株取引タイムテーブル
-    std::vector<StockTradingTactics> m_tactics;     //!< 株取引戦略データ
-    std::unordered_map<eStockInvestmentsType, std::vector<StockPortfolio>> m_portfolio;   //!< 監視銘柄データ
+    //!< JPX固有休業日(土日祝でなくとも休みになる日)
+    std::vector<MMDD> m_jpx_holiday;
+    //!< 株取引タイムテーブル
+    std::vector<StockTimeTableUnit> m_timetable;
 
     RandomGenerator m_rand_gen; //!< 乱数生成器
     CipherAES m_aes_uid;        //!< 暗号uid
@@ -87,9 +84,6 @@ private:
             return;
         }
         if (!script_mng.BuildStockTimeTable(o_message, m_timetable)) {
-            return;
-        }
-        if (!script_mng.BuildStockTactics(o_message, m_tactics)) {
             return;
         }
 
@@ -130,7 +124,7 @@ private:
             //
             const uint32_t ACCEPTABLE_DIFF_SECONDS = 10*60; // 許容される時間ズレ(10分)
             /*std::string dummy("Fri, 03 Jan 2014 21:39:11 GMT");*/
-            auto pt(utility::ToLocalTimeFromRFC1123(datetime));
+            auto pt(std::move(utility::ToLocalTimeFromRFC1123(datetime)));
             utility::ToTimeFromBoostPosixTime(pt, m_last_sv_time);
             m_last_sv_time_tick = utility::GetTickCountGeneral();
             if (ACCEPTABLE_DIFF_SECONDS >= utility::GetDiffSecondsFromLocalMachineTime(m_last_sv_time)) {
@@ -139,7 +133,7 @@ private:
                 //m_last_sv_time.tm_min = 19;//
                 //m_last_sv_time.tm_sec = 25;//
                 //m_last_sv_time.tm_wday = 1;
-                is_holiday = false;
+                //is_holiday = false;
 
                 // 土日なら週明けに再調査(成否に関係なく)
                 m_after_wait_seq = SEQ_CLOSED_CHECK;
@@ -197,19 +191,21 @@ private:
         }
         bool b_valid = true;
         if (prev_mode != now_tt.m_mode) {
-            auto initPortfolio = [this](eStockInvestmentsType investments_type, const std::vector<std::pair<uint32_t, std::string>>& rcv_portfolio)->bool {
-                return InitPortfolio(investments_type, rcv_portfolio);
+            auto initPortfolio = [this](eStockInvestmentsType investments_type,
+                                        const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)->bool {
+                std::lock_guard<std::mutex> lock(m_mtx); // http関連スレッドから呼ばれるのでlockが必要
+                return m_pOrderingManager->InitPortfolio(investments_type, rcv_portfolio);
             };
-            std::vector<uint32_t> monitoring_code;
+            std::unordered_set<uint32_t> monitoring_code;
             if (StockTimeTableUnit::IDLE == now_tt.m_mode) {
                 // IDLEに変化したら、その次のモードの取引所で開始処理実行
                 eStockInvestmentsType start_inv = StockTimeTableUnit::ToInvestmentsTypeFromMode(next_mode);
-                GetMonitoringCode(monitoring_code);
+                m_pOrderingManager->GetMonitoringCode(monitoring_code);
                 b_valid = m_pStarter->Start(tickCount, m_aes_uid, m_aes_pwd, monitoring_code, start_inv, initPortfolio);
             } else if (StockTimeTableUnit::TOKYO == now_tt.m_mode || StockTimeTableUnit::PTS == now_tt.m_mode) {
                 // 売買モードに変化したら開始処理実行
                 eStockInvestmentsType start_inv = StockTimeTableUnit::ToInvestmentsTypeFromMode(now_tt.m_mode);
-                GetMonitoringCode(monitoring_code);
+                m_pOrderingManager->GetMonitoringCode(monitoring_code);
                 b_valid = m_pStarter->Start(tickCount, m_aes_uid, m_aes_pwd, monitoring_code, start_inv, initPortfolio);
             }
         }
@@ -250,15 +246,14 @@ private:
                                                                       const std::wstring& sendtime,
                                                                       const std::vector<RcvStockValueData>& rcv_valuedata) {
                         if (b_success) {
-                            UpdateValueData(investments_type, sendtime, rcv_valuedata);
+                            std::lock_guard<std::mutex> lock(m_mtx); // http関連スレッドから呼ばれるのでlockが必要
+                            m_pOrderingManager->UpdateValueData(investments_type, sendtime, rcv_valuedata);
                         }
                     });
                 }
-                // 戦略解釈
+                // 発注管理定期更新
                 const HHMMSS hhmmss(now_tm.tm_hour, now_tm.tm_min, now_tm.tm_sec);
-                m_pOrderingManager->InterpretTactics(tickCount, hhmmss, investments_type, m_tactics, m_portfolio[investments_type], script_mng);
-                // 処理
-                m_pOrderingManager->IssueOrder(m_aes_pwd_sub);
+                m_pOrderingManager->Update(tickCount, hhmmss, investments_type, m_aes_pwd_sub, script_mng);
             }
         }
 
@@ -282,7 +277,6 @@ private:
         }
     }
 
-private:
     /*!
      *  @brief  JPXの固有休業日か
      *  @param  src 調べる日
@@ -299,99 +293,14 @@ private:
         return false;
     }
 
-    /*!
-     *  @brief  価格データ更新
-     *  @param  investments_type    取引所種別
-     *  @param  senddate            価格データ送信時刻
-     *  @param  rcv_valuedata       受け取った価格データ
-     */
-    void UpdateValueData(eStockInvestmentsType investments_type, const std::wstring& sendtime, const std::vector<RcvStockValueData>& rcv_valuedata)
-    {
-        std::lock_guard<std::mutex> lock(m_mtx); // http関連スレッドから呼ばれるのでlockが必要
-
-        auto portfolio_it = m_portfolio.find(investments_type);
-        if (portfolio_it != m_portfolio.end()) {
-            std::tm tm_send; // 価格データ送信時刻(サーバタイム)
-            auto pt(utility::ToLocalTimeFromRFC1123(sendtime));
-            utility::ToTimeFromBoostPosixTime(pt, tm_send);
-            std::vector<StockPortfolio>& portfolio(portfolio_it->second);
-            for (const auto& vunit: rcv_valuedata) {
-                uint32_t code = vunit.m_code;
-                auto it = std::find_if(portfolio.begin(), portfolio.end(), [code](const StockPortfolio& pfu) {
-                    return (pfu.m_code.GetCode() == code);
-                });
-                if (it != portfolio.end()) {
-                    it->UpdateValueData(vunit, tm_send);
-                } else {
-                    // 見つからなかったらどうする？(error)
-                }
-            }
-        } else {
-            // なぜか初期化されてない(error)
-        }
-    }
-
-    /*!
-     *  @brief  ポートフォリオ初期化
-     *  @param  investments_type    取引所種別
-     *  @param  rcv_portfolio       受信したポートフォリオ(簡易)
-     *  @retval true                成功
-     */
-    bool InitPortfolio(eStockInvestmentsType investments_type,  const std::vector<std::pair<uint32_t, std::string>>& rcv_portfolio)
-    {
-        std::lock_guard<std::mutex> lock(m_mtx); // http関連スレッドから呼ばれるのでlockが必要
-
-        // 受信したポートフォリオが監視銘柄と一致してるかチェック
-        std::vector<StockPortfolio> portfolio;
-        std::vector<uint32_t> monitoring_code;
-        GetMonitoringCode(monitoring_code);
-        portfolio.reserve(monitoring_code.size());
-        for (uint32_t code: monitoring_code) {
-            auto it = std::find_if(rcv_portfolio.begin(),
-                                   rcv_portfolio.end(),
-                                   [code](const std::pair<uint32_t, std::string>& rcv_pf_unit) {
-                return rcv_pf_unit.first == code;
-            });
-            if (it != rcv_portfolio.end()) {
-                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
-                std::wstring name(std::move(utfconv.from_bytes(it->second)));
-                portfolio.emplace_back(code, name);
-            } else {
-                return false;
-            }
-        }
-        // 空だったら新規作成
-        auto portfolio_it = m_portfolio.find(investments_type);
-        if (portfolio_it == m_portfolio.end()) {
-            m_portfolio.emplace(investments_type, portfolio);
-        }
-        return true;
-    }
-
-    /*!
-     *  @brief  監視銘柄のコードだけ抽出
-     *  @param[out] dst 格納先
-     */
-    void GetMonitoringCode(std::vector<uint32_t>& dst)
-    {
-        for (const StockTradingTactics& tactics: m_tactics) {
-            std::vector<StockCode> code_vec;
-            tactics.GetCode(code_vec);
-            for (const StockCode& scode: code_vec) {
-                if (std::find(dst.begin(), dst.end(), scode.GetCode()) == dst.end()) {
-                    dst.emplace_back(scode.GetCode());
-                }
-            }
-        }
-    }
-
 public:
     /*!
      *  @param  securities  証券会社種別
      *  @param  tw_session  twitterとのセッション
      */
     PIMPL(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session)
-    : m_sequence(SEQ_INITIALIZE)
+    : m_mtx()
+    , m_sequence(SEQ_INITIALIZE)
     , m_securities(securities)
     , m_pSecSession()
     , m_pTwSession(tw_session)
@@ -400,8 +309,6 @@ public:
     , m_pHolidayInvestigator()
     , m_jpx_holiday()
     , m_timetable()
-    , m_tactics()
-    , m_portfolio()
     , m_rand_gen()
     , m_aes_uid()
     , m_aes_pwd()

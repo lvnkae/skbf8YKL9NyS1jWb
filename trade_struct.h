@@ -81,7 +81,7 @@ struct StockTimeTableUnit
  struct StockOrder
 {
     StockCode m_code;       //!< 銘柄コード
-    uint32_t m_number;      //!< 株数
+    int32_t m_number;       //!< 株数
     float64 m_value;        //!< 価格
     bool m_b_leverage;      //!< 信用フラグ
     bool m_b_market_order;  //!< 成行フラグ
@@ -159,21 +159,24 @@ struct StockTimeTableUnit
  */
  struct RcvResponseStockOrder
 {
-    int32_t m_order_id;                 //!< 注文番号
+    int32_t m_order_id;                 //!< 注文番号 管理用(SBI:グローバルっぽい/)
+    int32_t m_user_order_id;            //!< 注文番号 表示用(SIB:ユーザ固有/)
     eOrderType m_type;                  //!< 注文種別
     eStockInvestmentsType m_investments;//!< 取引所種別
     uint32_t m_code;                    //!< 銘柄コード
-    uint32_t m_number;                  //!< 注文株数
+    int32_t m_number;                   //!< 注文株数
     float64 m_value;                    //!< 注文価格
     bool m_b_leverage;                  //!< 信用フラグ
 
     RcvResponseStockOrder()
     : m_order_id(0)
+    , m_user_order_id(0)
     , m_type(ORDER_NONE)
     , m_investments(INVESTMENTS_NONE)
     , m_code(0)
     , m_number(0)
     , m_value(0.0)
+    , m_b_leverage(false)
     {
     }
 };

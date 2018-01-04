@@ -158,8 +158,8 @@ private:
     {
         LuaAccessor& accessor = m_lua_accessor;
         int32_t group_id = 0;
-        if (accessor.GetTableParam("Group", group_id)) {
-            // グループIDは設定がなくてもエラーではない
+        if (accessor.GetTableParam("GroupID", group_id)) {
+            // 戦略グループIDは設定がなくてもエラーではない
             o_order.SetGroupID(group_id);
         }
         if (!accessor.GetTableParam("Type", o_type_str)) {
@@ -180,9 +180,10 @@ private:
     /*!
      *  @brief  株取引戦略データ構築：新規注文1つ分
      *  @param[out] o_message
+     *  @param[out] o_unique_id 戦略注文固有ID(新規登録したらinc)
      *  @param[out] o_tactics   戦略データ格納先
      */
-    void BuildStockTactics_FreshUnit(UpdateMessage& o_message, StockTradingTactics& o_tactics)
+    void BuildStockTactics_FreshUnit(UpdateMessage& o_message, int32_t& o_unique_id, StockTradingTactics& o_tactics)
     {
         std::string command_type_str;
         int32_t val_func = 0;
@@ -203,14 +204,16 @@ private:
             o_message.AddErrorMessage("illegal command type(" + command_type_str + ")");
             return;
         }
+        order.SetUniqueID(o_unique_id++);
         o_tactics.AddFreshOrder(order);
     }
     /*!
      *  @brief  株取引戦略データ構築：返済注文1つ分
      *  @param[out] o_message
+     *  @param[out] o_unique_id 戦略注文固有ID(返済注文登録したらinc)
      *  @param[out] o_tactics   戦略データ格納先
      */
-    void BuildStockTactics_RepaymentUnit(UpdateMessage& o_message, StockTradingTactics& o_tactics)
+    void BuildStockTactics_RepaymentUnit(UpdateMessage& o_message, int32_t& o_unique_id, StockTradingTactics& o_tactics)
     {
         std::string repayment_type_str;
         int32_t val_func = 0;
@@ -231,15 +234,21 @@ private:
             o_message.AddErrorMessage("illegal repayment type(" + repayment_type_str + ")");
             return;
         }
+        order.SetUniqueID(o_unique_id++);
         o_tactics.AddRepaymentOrder(order);
     }
 
     /*!
      *  @brief  株取引戦略データ構築：戦略設定1つ分
      *  @param[out] o_message
+     *  @param[out] o_unique_id 戦略注文固有ID
+     *  @param[out] o_codes     銘柄コード番号群格納先
      *  @param[out] o_tactics   戦略データ格納先
      */
-    bool BuildStockTactics_TacticsUnit(UpdateMessage& o_message, StockTradingTactics& o_tactics)
+    bool BuildStockTactics_TacticsUnit(UpdateMessage& o_message,
+                                       int32_t& o_unique_id,
+                                       std::vector<uint32_t>& o_codes,
+                                       StockTradingTactics& o_tactics)
     {
         LuaAccessor& accessor = m_lua_accessor;
 
@@ -251,7 +260,7 @@ private:
                 if (accessor.GetArrayParam(inx, code)) {
                     StockCode scode(code);
                     if (scode.IsValid()) {
-                        o_tactics.SetCode(scode.GetCode());
+                        o_codes.emplace_back(scode.GetCode());
                     } else {
                         o_message.AddWarningMessage("illegal stock code( " + std::to_string(inx) + "_" + std::to_string(code) + ").");
                     }
@@ -271,11 +280,27 @@ private:
             int32_t num_reset = accessor.OpenChildTable("Emergency");
             for (int32_t inx = 0; inx < num_reset; inx++) {
                 o_message.AddMessage("<EMERGENCY" + std::to_string(inx) + ">");
+                StockTradingTactics::Emergency emg;
                 accessor.OpenChildTable(inx);
+                // 対象グループ
+                {
+                    const int32_t num_tgt = accessor.OpenChildTable("Target");
+                    for (int32_t inx = 0; inx < num_tgt; inx++) {
+                        int32_t group_id = 0;
+                        if (accessor.GetArrayParam(inx, group_id)) {
+                            emg.AddTargetGroupID(group_id);
+                        }
+                    }
+                    accessor.CloseTable();
+                }
+                // trigger
                 BuildStockTactics_TriggerUnit(o_message,
-                                              [&o_tactics](const StockTradingTactics::Trigger& trigger)
-                                                { o_tactics.AddEmergencyTrigger(trigger); }
+                                              [&emg](const StockTradingTactics::Trigger& trigger)
+                                                { emg.SetCondition(trigger); }
                                              );
+                if (!emg.empty()) {
+                    o_tactics.AddEmergencyMode(emg);
+                }
                 accessor.CloseTable();
             }
             accessor.CloseTable();
@@ -288,7 +313,7 @@ private:
             for (int32_t inx = 0; inx < num_reset; inx++) {
                 o_message.AddMessage("<FRESG" + std::to_string(inx) + ">");
                 accessor.OpenChildTable(inx);
-                BuildStockTactics_FreshUnit(o_message, o_tactics);
+                BuildStockTactics_FreshUnit(o_message, o_unique_id, o_tactics);
                 accessor.CloseTable();
             }
             accessor.CloseTable();
@@ -301,7 +326,7 @@ private:
             for (int32_t inx = 0; inx < num_reset; inx++) {
                 o_message.AddMessage("<REPAYMENT" + std::to_string(inx) + ">");
                 accessor.OpenChildTable(inx);
-                BuildStockTactics_RepaymentUnit(o_message, o_tactics);
+                BuildStockTactics_RepaymentUnit(o_message, o_unique_id, o_tactics);
                 accessor.CloseTable();
             }
             accessor.CloseTable();
@@ -492,22 +517,31 @@ public:
      *  @brief  株取引戦略データ構築
      *  @param[out] o_message
      *  @param[out] o_tactics   戦略データ格納先
+     *  @param[out] o_link      紐付け情報格納先
+     *  @retval true    成功
+     *  @note   luaにアクセスする都合上constにできない
      */
-    bool BuildStockTactics(UpdateMessage& o_message, std::vector<StockTradingTactics>& o_tactics)
+    bool BuildStockTactics(UpdateMessage& o_message,
+                           std::unordered_map<int32_t, StockTradingTactics>& o_tactics,
+                           std::vector<std::pair<uint32_t, int32_t>>& o_link)
     {
         LuaAccessor& accessor = m_lua_accessor;
         o_message.AddMessage("[BuildStockTactics]");
 
         o_message.AddTab();
+        int32_t order_unique_id = 0;
         const int32_t num_tactics = accessor.OpenTable("StockTactics");
-        o_tactics.reserve(num_tactics);
         for (int32_t inx = 0; inx < num_tactics; inx++) {
             o_message.AddMessage("<TACTICS" + std::to_string(inx) + ">");
             StockTradingTactics tactics;
+            std::vector<uint32_t> codes;
             accessor.OpenChildTable(inx);
-            if (BuildStockTactics_TacticsUnit(o_message, tactics)) {
+            if (BuildStockTactics_TacticsUnit(o_message, order_unique_id, codes, tactics)) {
                 tactics.SetUniqueID(inx);
-                o_tactics.emplace_back(tactics);
+                o_tactics.emplace(inx, tactics);
+                for (uint32_t code: codes) {
+                    o_link.emplace_back(code, inx);
+                }
             }
             accessor.CloseTable();
         }
@@ -626,10 +660,13 @@ bool TradeAssistantSetting::BuildStockTimeTable(UpdateMessage& o_message, std::v
  *  @brief  株取引戦略データ構築
  *  @param[out] o_message
  *  @param[out] o_tactics   戦略データ格納先
+ *  @param[out] o_link      紐付け情報格納先
  */
-bool TradeAssistantSetting::BuildStockTactics(UpdateMessage& o_message, std::vector<StockTradingTactics>& o_tactics)
+bool TradeAssistantSetting::BuildStockTactics(UpdateMessage& o_message,
+                                              std::unordered_map<int32_t, StockTradingTactics>& o_tactics,
+                                              std::vector<std::pair<uint32_t, int32_t>>& o_link)
 {
-    return m_pImpl->BuildStockTactics(o_message, o_tactics);
+    return m_pImpl->BuildStockTactics(o_message, o_tactics, o_link);
 }
 
 /*!

@@ -6,6 +6,8 @@
 #pragma once
 
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 namespace trading
 {
@@ -28,29 +30,74 @@ public:
         ORDER,      //!< 発注
     };
 
+    enum eIparam_Order
+    {
+        IPARAM_GROUP_ID,        //!< 戦略グループID
+        IPARAM_UNIQUE_ID,       //!< 戦略注文固有ID
+        IPARAM_ORDER_TYPE,      //!< 注文種別(eOrderType)
+        IPARAM_ORDER_CONDITION, //!< 注文条件(eOrderConditon)
+        IPARAM_B_LEVERAGE,      //!< 信用取引フラグ
+        IPARAM_NUMBER,          //!< 注文株数
+        IPARAM_ORDER_ID,        //!< 注文番号(証券会社が発行したもの/管理用)
+
+        NUM_IPARAM_ORDER,       //!< signed intパラメータ数
+    };
+
     /*!
-     *  @param  type    命令種別
-     *  @param  code    銘柄コード
-     *  @param  name    銘柄名
-     *  @param  tid     戦略ID
-     *  @param  gid     戦略内グループID
+     *  @brief  コマンド生成(緊急モード)
+     *  @param  code            銘柄コード
+     *  @param  tactics_id      戦略ID
+     *  @param  target_group    対象グループ<戦略グループID>
      */
-    StockTradingCommand(eType type, const StockCode& code, const std::wstring& name, int32_t tid, int32_t gid);
+    StockTradingCommand(const StockCode& code,
+                        int32_t tactics_id,
+                        const std::unordered_set<int32_t>& target_group);
     /*!
-     *  @brief  発注価格設定
+     *  @brief  コマンド作成(発注[売買])
+     *  @param  code        銘柄コード
+     *  @param  tactics_id  戦略ID
+     *  @param  group_id    戦略グループID
+     *  @param  unique_id   戦略注文固有ID
+     *  @param  order_type  注文種別(eOrderType)
+     *  @param  order_cond  注文条件(eOrderCondition)
+     *  @param  b_leverage  信用取引フラグ
+     *  @param  number      注文株数
+     *  @param  value       注文価格
      */
-    void SetOrderParam(int32_t order_type,
-                       int32_t order_condition,
-                       uint32_t number,
-                       float64 value,
-                       bool b_leverage)
-    { 
-        param1 = order_type;
-        param2 = order_condition;
-        param3 = number;
-        param4 = (b_leverage) ?1 :0;
-        fparam0 = value;
-    }
+    StockTradingCommand(const StockCode& code,
+                        int32_t tactics_id,
+                        int32_t group_id,
+                        int32_t unique_id,
+                        int32_t order_type,
+                        int32_t order_condition,
+                        bool b_leverage,
+                        int32_t number,
+                        float64 value);
+    /*!
+     *  @brief  コマンド作成(発注[訂正])
+     *  @param  src_command 上書きする売買命令
+     *  @param  order_type  注文種別
+     *  @param  order_id    注文番号(証券会社が発行したもの/管理用)
+     */
+    StockTradingCommand(const StockTradingCommand& src_command,
+                        int32_t order_type,
+                        int32_t order_id);
+    /*!
+     *  @brief  コマンド作成(発注[取消])
+     *  @param  src_order   取り消す売買注文
+     *  @param  tactics_id  戦略ID
+     *  @param  group_id    戦略グループID
+     *  @param  unique_id   戦略注文固有ID
+     *  @param  order_type  注文種別(eOrderType)
+     *  @param  order_id    注文番号(証券会社が発行したもの/管理用)
+     */
+    StockTradingCommand(const StockOrder& src_order,
+                        int32_t tactics_id,
+                        int32_t group_id,
+                        int32_t unique_id,
+                        int32_t order_type,
+                        int32_t order_id);
+
 
     /*!
      *  @brief  命令種別を得る
@@ -61,35 +108,19 @@ public:
      */
     uint32_t GetCode() const { return m_code; }
     /*!
-     *  @brief  銘柄名(utf-16)を得る
-     */
-    const std::wstring& GetName() const { return m_name; }
-    /*!
      *  @brief  戦略IDを得る
      */
     int32_t GetTacticsID() const { return m_tactics_id; }
-    /*!
-     *  @brief  グループIDを得る
-     */
-    int32_t GetGroupID() const { return m_group_id; }
 
     /*!
-     *  @brief  緊急時命令か
-     *  @note   緊急時命令(急騰落狙い/急変動時保険損切りetc)ならtrue
-     *  @note   RESET対象外にしたい…
+     *  @brief  緊急モード対象グループを参照する
      */
-    bool IsForEmergencyCommand() const
-    {
-        switch (m_type)
-        {
-        case ORDER:
-            return param4 != 0;
-        case EMERGENCY:
-            return false;
-        default:
-            return false;
-        }
-    }
+    const std::vector<int32_t>& RefEmergencyTargetGroup() const { return iparam; }
+    /*!
+     *  @brief  整数フリーパラメータをマージする
+     *  @param  src
+     */
+    void MergeIntFreeparam(const std::vector<int32_t>& src);
 
     /*!
      *  @brief  株注文パラメータを得る
@@ -97,21 +128,38 @@ public:
      *  @note   取引所種別は触らない(保有してないので)
      */
     void GetOrder(StockOrder& dst) const;
+    /*!
+     *  @brief  株注文フリーパラメータ取得：戦略グループID
+     */
+    int32_t GetOrderGroupID() const { return (m_type == ORDER && !iparam.empty()) ?iparam[IPARAM_GROUP_ID] :-1; }
+    /*!
+     *  @brief  株注文フリーパラメータ取得：戦略注文固有ID
+     */
+    int32_t GetOrderUniqueID() const { return (m_type == ORDER && !iparam.empty()) ?iparam[IPARAM_UNIQUE_ID] :-1; }
+    /*!
+     *  @brief  株注文フリーパラメータ取得：注文種別(eOrderType)
+     */
+    int32_t GetOrderType() const { return (m_type == ORDER && !iparam.empty()) ?iparam[IPARAM_ORDER_TYPE] :0/*ORDER_NONE*/; }
+    /*!
+     *  @brief  株注文フリーパラメータ取得：注文番号
+     */
+    int32_t GetOrderID() const { return (m_type == ORDER && !iparam.empty()) ?iparam[IPARAM_ORDER_ID] :-1; }
+    /*!
+     *  @brief  rightは上位の売買注文か？
+     *  @param  right   比較する命令
+     */
+    bool IsUpperBuySellOrder(const StockTradingCommand& right) const;
+
 
 private:
     eType m_type;           //!< 命令種別
     uint32_t m_code;        //!< 銘柄コード
-    std::wstring m_name;    //!< 銘柄名(メッセージ用/utf-16)
     int32_t m_tactics_id;   //!< 所属戦略ID
-    int32_t m_group_id;     //!< 戦略内グループID
 
-    int32_t param0;     //!< フリーパラメータ(int32) [                /              ]
-    int32_t param1;     //!< フリーパラメータ(int32) [                /eOrderType    ]
-    int32_t param2;     //!< フリーパラメータ(int32) [                /eOrderConditon]
-    uint32_t param3;    //!< フリーパラメータ(int32) [                /株数          ]
-    uint32_t param4;    //!< フリーパラメータ(int32) [緊急時命令フラグ/信用フラグ    ]
-
-    float64 fparam0;    //!< フリーパラメータ(float) [                /発注価格      ]
+    //! フリーパラメータ(符号付き整数)
+    std::vector<int32_t> iparam;
+    //! フリーパラメータ(倍精度浮動小数)
+    float64 fparam;
 };
 
 } // namespace trading

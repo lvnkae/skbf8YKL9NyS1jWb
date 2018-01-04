@@ -39,7 +39,7 @@ private:
      *  @param  investments_type    取引所種別
      *  @param  init_portfolio      ポートフォリオ初期化関数
      */
-    void CreatePortfolio(const std::vector<uint32_t>& monitoring_code,
+    void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
                          eStockInvestmentsType investments_type,
                          const InitPortfolioFunc& init_portfolio)
     {
@@ -49,7 +49,7 @@ private:
                                            [this, 
                                             investments_type,
                                             init_portfolio](bool b_result,
-                                                            const std::vector<std::pair<uint32_t, std::string>>& rcv_portfolio)
+                                                            const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)
             {
                 bool b_valid = false;
                 if (b_result) {
@@ -115,7 +115,7 @@ public:
     bool Start(int64_t tickCount,
                const CipherAES& aes_uid,
                const CipherAES& aes_pwd,
-               const std::vector<uint32_t>& monitoring_code,
+               const std::unordered_set<uint32_t>& monitoring_code,
                eStockInvestmentsType investments_type,
                const InitPortfolioFunc& init_portfolio)
     {
@@ -198,7 +198,7 @@ bool StockTradingStarterSbi::IsReady() const
 bool StockTradingStarterSbi::Start(int64_t tickCount,
                                    const CipherAES& aes_uid,
                                    const CipherAES& aes_pwd,
-                                   const std::vector<uint32_t>& monitoring_code,
+                                   const std::unordered_set<uint32_t>& monitoring_code,
                                    eStockInvestmentsType investments_type,
                                    const InitPortfolioFunc& init_portfolio)
 {

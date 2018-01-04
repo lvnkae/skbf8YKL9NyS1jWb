@@ -41,7 +41,7 @@ public:
      *  @param  callback            コールバック
      *  @note   mobileサイトで監視銘柄を登録する
      */
-    void CreatePortfolio(const std::vector<uint32_t>& monitoring_code,
+    void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
                          eStockInvestmentsType investments_type,
                          const CreatePortfolioCallback& callback) override;
     /*!
@@ -63,6 +63,21 @@ public:
      *  @param  callback    コールバック
      */
     void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) override;
+    /*!
+     *  @brief  注文訂正
+     *  @param  order_id    注文番号(管理用)
+     *  @param  order       注文情報
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    void CorrectOrder(int32_t order_id, const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) override;
+    /*!
+     *  @brief  注文取消
+     *  @param  order_id    注文番号(管理用)
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    void CancelOrder(int32_t order_id, const std::wstring& pwd, const OrderCallback& callback) override;
 
     /*!
      *  @brief  保有株式情報更新

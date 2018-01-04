@@ -7,13 +7,13 @@
 
 #include <functional>
 #include <vector>
+#include <unordered_set>
 
 struct HHMMSS;
 
 namespace trading
 {
 
-class StockCode;
 struct StockPortfolio;
 class StockTradingCommand;
 class TradeAssistantSetting;
@@ -76,9 +76,7 @@ public:
             m_signed_param =func_ref;
         }
 
-        int32_t Dbg_GetType() const { return static_cast<int32_t>(m_type); }
-        int32_t Dbg_GetSignedParam() const { return m_signed_param; }
-        float32 Dbg_GetFloatParam() const { return m_float_param; }
+        bool empty() const { return m_type == TRRIGER_NONE; }
 
         /*!
          *  @brief  判定
@@ -91,17 +89,52 @@ public:
     };
 
     /*!
+     *  @brief  緊急モード設定
+     */
+    class Emergency
+    {
+    private:
+        std::unordered_set<int32_t> m_group;    //!< 対象グループ番号
+        Trigger m_condition;                    //!< 発生条件
+
+    public:
+        Emergency()
+        : m_group()
+        , m_condition()
+        {
+        }
+
+        void AddTargetGroupID(int32_t group_id) { m_group.insert(group_id); }
+        void SetCondition(const Trigger& trigger) { m_condition = trigger; }
+
+        const std::unordered_set<int32_t>& RefTargetGroup() const { return m_group; }
+        bool empty() const { return m_condition.empty(); }
+
+        /*!
+         *  @brief  判定
+         *  @param  hhmmss      現在時分秒
+         *  @param  valuedata   価格データ(1銘柄分)
+         *  @param  script_mng  外部設定(スクリプト)管理者
+         *  @retval true        トリガー発生
+         */
+        bool Judge(const HHMMSS& hhmmss, const StockPortfolio& valuedata, TradeAssistantSetting& script_mng) const
+        {
+            return m_condition.Judge(hhmmss, valuedata, script_mng);
+        }
+    };
+
+    /*!
      *  @brief  注文設定
      */
     class Order
     {
     private:
-        int32_t m_group_id;     //!< 注文グループ番号(同一グループの注文は排他制御される)
+        int32_t m_unique_id;    //!< 注文固有ID
+        int32_t m_group_id;     //!< 戦略グループID(同一グループの注文は排他制御される)
         eOrderType m_type;      //!< タイプ
         int32_t m_value_func;   //!< 価格取得関数(リファレンス)
         int32_t m_volume;       //!< 株数
         bool m_b_leverage;      //!< 信用フラグ
-        bool m_b_for_emergency; //!< 緊急モードでも執行する命令か
         Trigger m_condition;    //!< 発注条件
 
         void SetParam(eOrderType type, bool b_leverage, int32_t func_ref, int32_t volume)
@@ -114,16 +147,17 @@ public:
 
     public:
         Order()
-        : m_group_id(0)
+        : m_unique_id(0)
+        , m_group_id(0)
         , m_type(eOrderType::ORDER_NONE)
         , m_volume(0)
         , m_value_func(0)
         , m_b_leverage(false)
-        , m_b_for_emergency(false)
         , m_condition()
         {
         }
 
+        void SetUniqueID(int32_t unique_id) { m_unique_id = unique_id; }
         void SetGroupID(int32_t group_id) { m_group_id = group_id; }
 
         void SetBuy(bool b_leverage, int32_t func_ref, int32_t volume) { SetParam(BUY, b_leverage, func_ref, volume); }
@@ -131,16 +165,13 @@ public:
         void SetCondition(const Trigger& trigger) { m_condition = trigger; }
 
         /*!
-         *  @brief  緊急モードでも執行する命令か？
-         */
-        bool IsForEmergency() const { return m_b_for_emergency; }
-        /*!
-         *  @brief  OrderType
+         *  @brief  OrderTypeを得る
          */
         eOrderType GetType() const { return m_type; }
-        int32_t GetVolume() const { return m_volume; }
-        bool GetIsLeverage() const { return m_b_leverage; }
         int32_t GetGroupID() const { return m_group_id; }
+        int32_t GetUniqueID() const { return m_unique_id; }
+        int32_t GetVolume()  const { return m_volume; }
+        bool GetIsLeverage() const { return m_b_leverage; }
         /*!
          *  @brief  価格取得関数参照取得
          */
@@ -156,8 +187,6 @@ public:
         {
             return m_condition.Judge(hhmmss, valuedata, script_mng);
         }
-
-        const Trigger& Dbg_RefTrigger() const { return m_condition; }
     };
 
     /*!
@@ -168,11 +197,6 @@ public:
      *  @brief  固有IDを得る
      */
     int32_t GetUniqueID() const { return m_unique_id; }
-    /*!
-     *  @brief  銘柄コード群を得る
-     *  @param[out] dst 格納先
-     */
-    void GetCode(std::vector<StockCode>& dst) const;
 
     /*!
      *  @brief  固有IDをセットする
@@ -180,15 +204,10 @@ public:
      */
     void SetUniqueID(int32_t id) { m_unique_id = id; }
     /*!
-     *  @brief  銘柄コードをセットする
-     *  @param  code    銘柄コード
+     *  @brief  緊急モードを追加する
+     *  @param  emergency   緊急モード設定
      */
-    void SetCode(uint32_t code);
-    /*!
-     *  @brief  緊急モードトリガーを追加する
-     *  @param  trigger トリガー
-     */
-    void AddEmergencyTrigger(const Trigger& trigger);
+    void AddEmergencyMode(const Emergency& emergency);
     /*!
      *  @brief  新規注文を追加
      *  @param  order   注文設定
@@ -202,41 +221,25 @@ public:
 
     /*!
      */
-    typedef std::function<void(int32_t, const StockTradingCommand&)> EnqueueFunc;
+    typedef std::function<void(const StockTradingCommand&)> EnqueueFunc;
 
     /*!
      *  @brief  戦略解釈
-     *  @param  b_emergency     緊急モードか
      *  @param  hhmmss          現在時分秒
-     *  @param  valuedata       価格データ(1取引所分)
-     *  @param  script_mng      外部設定(スクリプト)管理者
-     *  @param  enqueue_func    命令をキューに入れる関数
-     */
-    void Interpret(bool b_emergency,
-                   const HHMMSS& hhmmss,
-                   const std::vector<StockPortfolio>& valuedata,
-                   TradeAssistantSetting& script_mng,
-                   const EnqueueFunc& enqueue_func) const;
-
-private:
-    /*!
-     *  @brief  戦略解釈(1銘柄分)
-     *  @param  b_emergency     緊急モードか
-     *  @param  hhmmss          現在時分秒
+     *  @param  em_group        緊急モード対象グループ<戦略グループID>
      *  @param  valuedata       価格データ(1銘柄分)
      *  @param  script_mng      外部設定(スクリプト)管理者
      *  @param  enqueue_func    命令をキューに入れる関数
      */
-    void InterpretAtCode(bool b_emergency,
-                         const HHMMSS& hhmmss,
-                         const StockPortfolio& valuedata,
-                         TradeAssistantSetting& script_mng,
-                         const EnqueueFunc& enqueue_func) const;
+    void Interpret(const HHMMSS& hhmmss,
+                   const std::unordered_set<int32_t>& em_group,
+                   const StockPortfolio& valuedata,
+                   TradeAssistantSetting& script_mng,
+                   const EnqueueFunc& enqueue_func) const;
 
-
+private:
     int32_t m_unique_id;                //!< 固有ID(戦略データ間で被らない数字)
-    std::vector<StockCode> m_code;      //!< 銘柄コード(一つの戦略を複数の銘柄で使うこともある)
-    std::vector<Trigger> m_emergency;   //!< 緊急モードトリガー
+    std::vector<Emergency> m_emergency; //!< 緊急モードリスト
     std::vector<Order> m_fresh;         //!< 新規注文リスト
     std::vector<Order> m_repayment;     //!< 返済注文リスト
 };

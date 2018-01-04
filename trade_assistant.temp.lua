@@ -45,21 +45,25 @@ StockTactics = {
                 Type = "ValueGap", -- 最新N秒で指定割合価格変化(高値と安値の差で判定)があったか？
                 Percent = 3.00,
                 Second = 60,
+                Target = { 9408+0, 9408+1 }, -- 対象GroupID
             },
             {
                 Type = "ValueGap",
                 Percent = 4.00,
                 Second = 180,
+                Target = { 9408+0, 9408+1 },
             },
             {
                 Type = "ValueGap",
                 Percent = 5.00,
                 Second = 300,
+                Target = { 9408+0, 9408+1 },
             },
             -- 場中特買い/特売り対策
             {
                 Type = "NoContract", -- 指定秒数無約定が続いたか？(特売/買とみなす)
                 Second = 1800,
+                Target = { 9408+0, 9408+1 },
             },
         },
         -- 新規注文

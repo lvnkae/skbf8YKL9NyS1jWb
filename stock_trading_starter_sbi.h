@@ -50,7 +50,7 @@ public:
     bool Start(int64_t tickCount,
                const CipherAES& aes_uid,
                const CipherAES& aes_pwd,
-               const std::vector<uint32_t>& monitoring_code,
+               const std::unordered_set<uint32_t>& monitoring_code,
                eStockInvestmentsType investments_type,
                const InitPortfolioFunc& init_portfolio);
 

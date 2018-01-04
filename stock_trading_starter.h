@@ -9,6 +9,8 @@
 
 #include <functional>
 #include <vector>
+#include <unordered_map>
+#include <unordered_set>
 
 class CipherAES;
 
@@ -17,7 +19,7 @@ namespace trading
 class StockTradingStarter
 {
 public:
-    typedef std::function<bool(eStockInvestmentsType, const std::vector<std::pair<uint32_t, std::string>>& rcv_portfolio)> InitPortfolioFunc;
+    typedef std::function<bool(eStockInvestmentsType, const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)> InitPortfolioFunc;
 
     StockTradingStarter();
     ~StockTradingStarter();
@@ -41,7 +43,7 @@ public:
     virtual bool Start(int64_t tickCount,
                        const CipherAES& aes_uid,
                        const CipherAES& aes_pwd,
-                       const std::vector<uint32_t>& monitoring_code,
+                       const std::unordered_set<uint32_t>& monitoring_code,
                        eStockInvestmentsType investments_type,
                        const InitPortfolioFunc& init_portfolio) = 0;
 

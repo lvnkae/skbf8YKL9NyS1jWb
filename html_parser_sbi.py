@@ -22,6 +22,7 @@ def deleteNBSP(src):
         src = src.replace('&nbsp',' ')
     return src
     
+
 #   @brief  C++のeOrderTypeカバーclass
 class eOrderTypeEnum:
 
@@ -448,13 +449,20 @@ class StockOrderRegistIDParser(RegistIDParser):
 
     def handle_data(self, data):
         if not self.b_ok and self.b_start and self.tag_now == 'title':
-            if self.title_str in data.decode('utf-8'):
-                if '買' == self.order_tag:
-                # 括弧の全/半角に表記ゆれがある…
+            if '買' == self.order_tag:
+                if self.title_str in data.decode('utf-8'):
+                    # 括弧の全/半角に表記ゆれがある…
                     if u'買)' in data.decode('utf-8') or u'買）' in data.decode('utf-8'):
                         self.b_ok = True
-                elif '売' == self.order_tag:
+            elif '売' == self.order_tag:
+                if self.title_str in data.decode('utf-8'):
                     if u'売）' in data.decode('utf-8'):
+                        self.b_ok = True
+            elif '訂正' == self.order_tag:
+                if u'注文訂正' in data.decode('utf-8'):
+                        self.b_ok = True
+            elif '取消' == self.order_tag:
+                if u'注文取消' in data.decode('utf-8'):
                         self.b_ok = True
         self.b_start = False
 
@@ -479,31 +487,36 @@ def getStockOrderConfirmRegistID(html_u8, order_type):
     return parser.regist_id
 
 
-#   @brief  新規売買注文結果切り出しclass
+#   @brief  注文結果切り出しclass
 #   @note   注文受付画面(SBI-mobile[バックアップ]サイト)用
-class FreshOrderExParser(HTMLParser):
+class StockOrderExParser(HTMLParser):
  
     def __init__(self):
         HTMLParser.__init__(self)
         self.tag_now = ''
         self.b_start = False
+        self.order_type_tag = ''
         self.str_work = ''
         self.td_data = []
         self.table_count = 0
         self.parse_step = 0 #parse段階 0:対象titleタグ走査
-                            #          1:タイトルチェック、現物/信用フラグセット
+                            #          1:タイトルチェック
                             #          2:対象brタグ走査
-                            #          3:注文成否フラグセット
-                            #          4:対象inputタグ走査、注文番号(内部値)取得
+                            #          3:注文成否フラグセット・注文種別セット
+                            #          4:対象inputタグ走査、注文番号(管理用/表示用)取得
                             #          5:対象table走査
-                            #          6:tdタグ走査 + tableタグを抜けたら5に戻す(テーブル2個分)
-                            #          7:tdタグ終了までのデータ取得(空出ないものが見つかるまで)
-                            #            +tdタグを抜けたら6に戻す
+                            #          6:tdタグ走査
+                            #            + tableタグを抜けて...
+                            #               table2個分走査し終えてたらtdデータを変換して処理完了
+                            #               まだなら5に戻す
+                            #          7:tdタグ終了までのデータ取得(空でないものが見つかるまで)
+                            #            + tdタグを抜けたら6に戻す
                             #         -1:完了
         self.b_result = False   #注文成否
         self.b_leverage = False #信用フラグ
         self.order_type = 0     #注文種別[eOrderType]
-        self.order_id = -1      #注文番号
+        self.order_id = -1      #注文番号(内部値/管理用)
+        self.user_order_id = -1 #注文番号(ユーザ固有/表示用)
         self.code = 0           #銘柄コード
         self.investments = ''   #取引所タグ
         self.numbers = 0        #枚数
@@ -522,6 +535,7 @@ class FreshOrderExParser(HTMLParser):
                 if tag == 'br':
                     self.parse_step = 3
             elif self.parse_step == 4:
+                # 買/売ならばここで注文番号(管理用)を得てから次ステップ(5)へ
                 if tag == 'input':
                     attrs = dict(attrs)
                     if 'name' in attrs and 'value' in attrs and attrs['name'] == 'orderNum':
@@ -539,24 +553,38 @@ class FreshOrderExParser(HTMLParser):
                         
     def handle_data(self, data):
         if self.parse_step >= 0:
+            if self.parse_step == 4:
+                if self.tag_now == 'br':
+                    if data.isdigit():
+                        self.user_order_id = int(data)
+                        # 取消/訂正ならばここで次ステップ(5)へ進める(htmlに管理用注文番号がないので)
+                        if self.order_type_tag == '取消' or self.order_type_tag == '訂正':
+                            self.parse_step = 5
             if self.b_start:
                 if self.parse_step == 1:
-                    if self.tag_now == 'div' and u'注文受付' in data.decode('utf-8'):
-                        self.parse_step = 2
-                        if u'信用' in data.decode('utf-8'):
-                            self.b_leverage = True
-                        if u'買' in data.decode('utf-8'):
-                            eot = eOrderTypeEnum()
-                            self.order_type = eot.getOrderType('買')
-                        elif u'売' in data.decode('utf-8'):
-                            eot = eOrderTypeEnum()
-                            self.order_type = eot.getOrderType('売')
-                            
+                    if self.tag_now == 'div':
+                        u_str = data.decode('utf-8')
+                        if u'注文受付' in u_str:
+                            self.parse_step = 2
+                            if u'買' in data.decode('utf-8'):
+                                self.order_type_tag = '買'
+                            elif u'売' in data.decode('utf-8'):
+                                self.order_type_tag = '売'
+                        elif u'注文訂正' in u_str and u'受付' in u_str:
+                            self.parse_step = 2
+                            self.order_type_tag = '訂正'
+                        elif u'注文取消' in u_str and u'受付' in u_str:
+                            self.parse_step = 2
+                            self.order_type_tag = '取消'
                 elif self.parse_step == 3:
                     if self.tag_now == 'br':
-                        if u'ご注文を受付いたしました' in data.decode('utf-8') or u'ご注文を受付致しました' in data.decode('utf-8'):
+                        u_str = data.decode('utf-8')
+                        # ひらがな/漢字に表記ゆれがある…
+                        if u'注文' in u_str and (u'受付いたしました' in u_str or u'受付致しました' in u_str):
                             self.parse_step = 4
                             self.b_result = True
+                            eot = eOrderTypeEnum()
+                            self.order_type = eot.getOrderType(self.order_type_tag)
                 elif self.parse_step == 7:
                     if self.str_work == '':
                         self.str_work = data
@@ -570,38 +598,57 @@ class FreshOrderExParser(HTMLParser):
                         self.parse_step = 5
                     else:
                         self.parse_step = -1
-                        self.code = int(self.td_data[0])
-                        if u'東証' in self.td_data[1].decode('utf-8'):
-                            self.investments = 'TKY'
-                        elif u'PTS' in self.td_data[1].decode('utf-8'):
-                            self.investments = 'JNX'
-                        self.numbers = int(self.td_data[3].decode('utf-8').replace(u'株', ''))
-                        self.value = float(deleteComma(self.td_data[5].decode('utf-8').replace(u'円', '')))
+                        #
+                        td_data_len = len(self.td_data)
+                        for inx in range(0, td_data_len):
+                            # 銘柄コード[0]
+                            if inx == 0:
+                                self.code = int(self.td_data[inx])
+                            # 取引所種別[0]
+                            elif inx == 1:
+                                if u'東証' in self.td_data[inx].decode('utf-8'):
+                                    self.investments = 'TKY'
+                                elif u'PTS' in self.td_data[inx].decode('utf-8'):
+                                    self.investments = 'JNX'
+                            # 2以降は偶数がタグ/奇数が値
+                            elif not inx & 1:
+                                u_data_tag = self.td_data[inx].decode('utf-8')
+                                u_data_value = self.td_data[inx+1].decode('utf-8')
+                                if u'株数' in u_data_tag or u'注文数' in u_data_tag:
+                                    self.numbers = int(u_data_value.replace(u'株', ''))
+                                if u'価格' in u_data_tag:
+                                    self.value = float(deleteComma(u_data_value.replace(u'円', '')))
+                                if u'取引' in u_data_tag:
+                                    if u'信用' in u_data_value:
+                                        self.b_leverage = True
+                                    else:
+                                        self.b_leverage = False
             elif self.parse_step == 7:
                 if tag == 'td':
                     self.parse_step = 6
                     self.td_data.append(self.str_work)
 
     
-#   @brief  注文(買)結果を切り出す(SBI-mobile[バックアップ]サイト用)
-#   @param  html_u8 buyOrderEx.doのresponse(html/utf-8)
-#   @return (解析結果, 注文番号, 取引所コード(str), 銘柄コード(int), 株数, 価格, 信用フラグ)
-def responseFreshOrderExec(html_u8):
+#   @brief  注文結果を切り出す(SBI-mobile[バックアップ]サイト用)
+#   @param  html_u8 buyOrderEx.do/sellOrderEx.do/orderCancelEx.doのresponse(html/utf-8)
+#   @return (解析結果, 注文番号(管理用), 注文番号(表示用), 取引所コード(str), 銘柄コード(int), 株数, 価格, 信用フラグ, eOrderType)
+def responseStockOrderExec(html_u8):
 
-    parser = FreshOrderExParser()
+    parser = StockOrderExParser()
     parser.feed(html_u8)
     parser.close()
     
     return (parser.b_result,
             parser.order_id,
+            parser.user_order_id,
             parser.investments,
             parser.code,
             parser.numbers,
             parser.value,
             parser.b_leverage,
             parser.order_type)
-    
-    
+
+
 
 #   @brief  [Debug]Shift-JISで送られてきたhtmlをUTF8に変換してからファイル出力する
 #   @param  html_sjis   response(html/Shift-JIS)
@@ -652,7 +699,7 @@ if __name__ == "__main__":
 if __name__ == "__main__":
 
     strbuff = open('buy_order_ex.html').read()
-    print responseFreshOrderExec(strbuff)
+    print responseStockOrderExec(strbuff)
 
 if __name__ == "__main__":
 

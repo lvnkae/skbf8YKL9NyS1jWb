@@ -41,6 +41,9 @@ private:
     const size_t m_max_portfolio_entry;     //!< ポートフォリオ最大登録数
     const int32_t m_use_portfolio_number;   //!< 使用するポートフォリオ番号
 
+    typedef std::function<std::wstring (const StockOrder&, const std::wstring&, int64_t, const std::wstring&, web::http::http_request&)> PreOrderConfirm;
+    typedef std::function<std::wstring (const StockOrder&, int64_t, const std::wstring&, web::http::http_request&)> PreOrderExecute;
+
 private:
     PIMPL(const PIMPL&);
     PIMPL& operator= (const PIMPL&);
@@ -51,7 +54,7 @@ public:
      */
     PIMPL(const TradeAssistantSetting& script_mng)
     /* html解析用のpythonブジェクト生成 */
-    : m_python(PreparePythonScript(Environment::GetPythonHome(), "html_parser_sbi.py"))
+    : m_python(std::move(PreparePythonScript(Environment::GetPythonHome(), "html_parser_sbi.py")))
     , m_cookies_gr()
     , m_last_access_tick_mb(0)
     , m_last_access_tick_pc(0)
@@ -73,7 +76,7 @@ public:
         utility::SetHttpCommonHeaderSimple(request);
         std::wstring form_data;
         utility::AddFormDataParamToString(L"username", uid, form_data);
-        utility::AddFormDataParamToString(L"password", pwd, form_data);
+        utility::AddFormDataParamToString(PARAM_NAME_PASSWORD, pwd, form_data);
         utility::SetFormData(form_data, request);
         const std::wstring url(URL_BK_LOGIN);
         web::http::client::http_client http_client(url);
@@ -106,7 +109,7 @@ public:
                     { L"_ControlID",        L"WPLETlgR001Control" },
                     { L"_DataStoreID",      L"DSWPLETlgR001Control" },
                     { L"_PageID",           L"WPLETlgR001Rlgn10" },
-                    { L"_ActionID",         L"loginNyuSyuKin" },
+                    { L"_ActionID",         L"loginPortfolio" },
                     { L"getFlg",            L"on" },
                     { L"allPrmFlg",         L"" },
                     { L"_ReturnPageInfo",   L"" },
@@ -150,7 +153,7 @@ public:
      *  @param  investments_code    株取引所種別
      *  @param  callback            コールバック
      */
-    void CreatePortfolio(const std::vector<uint32_t>& monitoring_code,
+    void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
                          eStockInvestmentsType investments_type,
                          const CreatePortfolioCallback& callback)
     {
@@ -180,7 +183,7 @@ public:
             {
                 const int64_t regist_id = boost::python::extract<int64_t>(m_python.attr("getPortfolioRegistID")(inStringBuffer.collection()));
                 if (regist_id < 0) {
-                    callback(false, std::vector<std::pair<uint32_t, std::string>>());
+                    callback(false, std::unordered_map<uint32_t, std::wstring>());
                     return;
                 }
 
@@ -200,16 +203,18 @@ public:
                     concurrency::streams::container_buffer<std::string> inStringBuffer;
                     return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, callback](size_t bytesRead)
                     {
-                        std::vector<std::pair<uint32_t, std::string>> rcv_portfolio;
+                        std::unordered_map<uint32_t, std::wstring> rcv_portfolio;
                         const std::string& html_u8 = inStringBuffer.collection();
                         const boost::python::list rcv_data = boost::python::extract<boost::python::list>(m_python.attr("getPortfolioMobile")(html_u8));
                         const auto len = boost::python::len(rcv_data);
+                        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
                         rcv_portfolio.reserve(len);
                         for (auto inx = 0; inx < len; inx++) {
-                            auto elem = rcv_data[inx];
-                            std::string u8work = boost::python::extract<std::string>(elem[0]);
-                            uint32_t code = boost::python::extract<uint32_t>(elem[1]);
-                            rcv_portfolio.emplace_back(code, u8work);
+                            const auto elem(std::move(rcv_data[inx]));
+                            const std::string u8name(std::move(boost::python::extract<std::string>(elem[0])));
+                            const std::wstring u16name(std::move(utfconv.from_bytes(u8name)));
+                            const uint32_t code = boost::python::extract<uint32_t>(elem[1]);
+                            rcv_portfolio.emplace(code, u16name);
                         }
                         callback(true, rcv_portfolio);
                     });
@@ -328,13 +333,22 @@ public:
         });
     }
 
+
     /*!
-     *  @brief  新規売買注文
-     *  @param  order       注文情報
+     *  @brief  汎用株注文
+     *  @param  order           注文情報
      *  @param  pwd
-     *  @param  callback    コールバック
+     *  @param  callback        コールバック
+     *  @param  input_url       注文入力URL
+     *  @param  pre_confirm     注文確認前処理
+     *  @param  pre_execute     注文発行前処理
      */
-    void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback)
+    void StockOrderExecute(const StockOrder& order,
+                           const std::wstring& pwd,
+                           const OrderCallback& callback,
+                           const std::wstring& input_url,
+                           const PreOrderConfirm& pre_confirm,
+                           const PreOrderExecute& pre_execute)
     {
         if (!order.IsValid()) {
             callback(false, RcvResponseStockOrder(), std::wstring());    // 不正注文(error)
@@ -342,21 +356,19 @@ public:
         }
         // 注文入力 ※regist_id取得
         web::http::http_request request(web::http::methods::GET);
-        std::wstring url;
-        BuildOrderURL(order.m_b_leverage, URL_BK_ORDER[order.m_type][OSTEP_INPUT], url);
-        utility::SetHttpCommonHeaderKeepAlive(url, m_cookies_gr, std::wstring(), request);
-        utility::AddItemToURL(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.m_code.GetCode()), url);
-        utility::AddItemToURL(PARAM_NAME_ORDER_INVESTIMENTS, GetSbiInvestimentsCode(order.m_investiments), url);
-        //
-        web::http::client::http_client http_client(url);
-        http_client.request(request).then([this, url, order, pwd, callback](web::http::http_response response)
+        utility::SetHttpCommonHeaderKeepAlive(input_url, m_cookies_gr, std::wstring(), request);
+        web::http::client::http_client http_client(input_url);
+        http_client.request(request).then([this, input_url, order, pwd, callback,
+                                           pre_confirm, pre_execute](web::http::http_response response)
         {
             m_last_access_tick_mb = utility::GetTickCountGeneral();
-            m_cookies_gr.Set(response.headers(), url);
+            m_cookies_gr.Set(response.headers(), input_url);
             utility::string_t date_str(response.headers().date());
             concurrency::streams::istream bodyStream = response.body();
             concurrency::streams::container_buffer<std::string> inStringBuffer;
-            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, url, order, pwd, callback](size_t bytesRead)
+            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str,
+                                                                    input_url, order, pwd, callback,
+                                                                    pre_confirm, pre_execute](size_t bytesRead)
             {
                 // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
                 std::lock_guard<std::recursive_mutex> lock(m_mtx);
@@ -371,22 +383,20 @@ public:
 
                 // 注文確認 ※regist_id取得
                 web::http::http_request request(web::http::methods::POST);
-                std::wstring cf_url;
-                BuildOrderURL(order.m_b_leverage, URL_BK_ORDER[order.m_type][OSTEP_CONFIRM], cf_url);
-                utility::SetHttpCommonHeaderKeepAlive(cf_url, m_cookies_gr, url, request);
-                std::wstring form_data;
-                BuildOrderForFormData(order, pwd, regist_id, form_data);
-                utility::SetFormData(form_data, request);
+                std::wstring cf_url(std::move(pre_confirm(order, pwd, regist_id, input_url, request)));
                 //
                 web::http::client::http_client http_client(cf_url);
-                http_client.request(request).then([this, cf_url, order, pwd, callback](web::http::http_response response)
+                http_client.request(request).then([this, cf_url, order, callback,
+                                                   pre_execute](web::http::http_response response)
                 {
                     m_last_access_tick_mb = utility::GetTickCountGeneral();
                     m_cookies_gr.Set(response.headers(), cf_url);
                     utility::string_t date_str(response.headers().date());
                     concurrency::streams::istream bodyStream = response.body();
                     concurrency::streams::container_buffer<std::string> inStringBuffer;
-                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, cf_url, order, pwd, callback](size_t bytesRead)
+                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str,
+                                                                             cf_url, order, callback,
+                                                                             pre_execute](size_t bytesRead)
                     {
                         // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
                         std::lock_guard<std::recursive_mutex> lock(m_mtx);
@@ -401,12 +411,8 @@ public:
 
                         // 注文発行
                         web::http::http_request request(web::http::methods::POST);
-                        std::wstring ex_url;
-                        BuildOrderURL(order.m_b_leverage, URL_BK_ORDER[order.m_type][OSTEP_EXECUTE], ex_url);
-                        utility::SetHttpCommonHeaderKeepAlive(ex_url, m_cookies_gr, cf_url, request);
-                        std::wstring form_data;
-                        BuildOrderForFormData(order, pwd, regist_id, form_data);
-                        utility::SetFormData(form_data, request);
+                        std::wstring ex_url(std::move(pre_execute(order, regist_id, cf_url, request)));
+                        //
                         web::http::client::http_client http_client(ex_url);
                         http_client.request(request).then([this, ex_url, order, callback](web::http::http_response response)
                         {
@@ -421,20 +427,156 @@ public:
                                 std::lock_guard<std::recursive_mutex> lock(m_mtx);
                                 //
                                 const boost::python::tuple t
-                                    = boost::python::extract<boost::python::tuple>(m_python.attr("responseFreshOrderExec")(inStringBuffer.collection()));
+                                    = boost::python::extract<boost::python::tuple>(m_python.attr("responseStockOrderExec")(inStringBuffer.collection()));
                                 RcvResponseStockOrder rcv_order;
-                                const bool b_result = boost::python::extract<bool>(t[0]);
-                                rcv_order.m_order_id = boost::python::extract<int32_t>(t[1]);
-                                rcv_order.m_investments = GetStockInvestmentsTypeFromSbiCode(boost::python::extract<std::string>(t[2]));
-                                rcv_order.m_code = boost::python::extract<uint32_t>(t[3]);
-                                rcv_order.m_number = boost::python::extract<uint32_t>(t[4]);
-                                rcv_order.m_value = boost::python::extract<float64>(t[5]);
-                                rcv_order.m_b_leverage = boost::python::extract<bool>(t[6]);
-                                const int32_t order_type = boost::python::extract<int32_t>(t[7]);
-                                rcv_order.m_type = static_cast<eOrderType>(order_type);
+                                const bool b_result = ToRcvResponseStockOrderFromResult_responseStockOrderExec(t, rcv_order);
                                 callback(b_result, rcv_order, date_str);
                             });
                         });
+                    });
+                });
+            });
+        });
+    }
+
+    /*!
+     *  @brief  新規売買注文
+     *  @param  order       注文情報
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback)
+    {
+        // 注文入力 ※regist_id取得
+        std::wstring url(std::move(BuildOrderURL(order.m_b_leverage, URL_BK_ORDER[order.m_type][OSTEP_INPUT])));
+        utility::AddItemToURL(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.m_code.GetCode()), url);
+        utility::AddItemToURL(PARAM_NAME_ORDER_INVESTIMENTS, GetSbiInvestimentsCode(order.m_investiments), url);
+
+        // 注文確認準備function
+        const auto pre_confirm = [this](const StockOrder& order,
+                                        const std::wstring& pass,
+                                        int64_t regist_id,
+                                        const std::wstring& input_url,
+                                        web::http::http_request& request)->std::wstring
+        {
+            std::wstring cf_url(std::move(BuildOrderURL(order.m_b_leverage, URL_BK_ORDER[order.m_type][OSTEP_CONFIRM])));
+            utility::SetHttpCommonHeaderKeepAlive(cf_url, m_cookies_gr, input_url, request);
+            BuildFreshOrderFormData(order, pass, regist_id, request);
+            return cf_url;
+        };
+        // 注文発行準備function
+        const auto pre_execute = [this](const StockOrder& order,
+                                        int64_t regist_id,
+                                        const std::wstring& cf_url,
+                                        web::http::http_request& request)->std::wstring
+        {
+            std::wstring ex_url(std::move(BuildOrderURL(order.m_b_leverage, URL_BK_ORDER[order.m_type][OSTEP_EXECUTE])));
+            utility::SetHttpCommonHeaderKeepAlive(ex_url, m_cookies_gr, cf_url, request);
+            BuildFreshOrderFormData(order, std::wstring(), regist_id, request); // 実行時はpass不要
+            return ex_url;
+        };
+
+        StockOrderExecute(order, pwd, callback, url, pre_confirm, pre_execute);
+    }
+
+    /*!
+     *  @brief  注文訂正
+     *  @param  order_id    注文番号(管理用)
+     *  @param  order       注文情報
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    void CorrectOrder(int32_t order_id, const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback)
+    {
+        // 注文入力 ※regist_id取得
+        std::wstring url(BuildControlOrderURL(URL_BK_ORDER[ORDER_CORRECT][OSTEP_INPUT]));
+        utility::AddItemToURL(PARAM_NAME_CORRECT_ORDER_ID, std::to_wstring(order_id), url);
+
+        // 注文確認準備function
+        const auto pre_confirm = [this, order_id](const StockOrder& order,
+                                                  const std::wstring& pass,
+                                                  int64_t regist_id,
+                                                  const std::wstring& input_url,
+                                                  web::http::http_request& request)->std::wstring
+        {
+            std::wstring cf_url(std::move(std::wstring(URL_BK_CORRECTORDER_CONFIRM)));
+            utility::SetHttpCommonHeaderKeepAlive(cf_url, m_cookies_gr, input_url, request);
+            BuildCorrectOrderFormData(order_id, order, pass, regist_id, request);
+            return cf_url;
+        };
+        // 注文発行準備function
+        const auto pre_execute = [this, order_id](const StockOrder& order,
+                                                  int64_t regist_id,
+                                                  const std::wstring& cf_url,
+                                                  web::http::http_request& request)->std::wstring
+        {
+            std::wstring ex_url(std::move(std::wstring(URL_BK_CORRECTORDER_EXCUTE)));
+            utility::SetHttpCommonHeaderKeepAlive(ex_url, m_cookies_gr, cf_url, request);
+            BuildCorrectOrderFormData(order_id, order, std::wstring(), regist_id, request); // 実行時はpass不要
+            return ex_url;
+        };
+
+        StockOrderExecute(order, pwd, callback, url, pre_confirm, pre_execute);
+    }
+
+    /*!
+     *  @brief  注文取消
+     *  @param  order_id    注文番号(管理用)
+     *  @param  pwd
+     *  @param  callback    コールバック
+     */
+    void CancelOrder(int32_t order_id, const std::wstring& pwd, const OrderCallback& callback)
+    {
+        // 取消入力 ※regist_id取得
+        web::http::http_request request(web::http::methods::GET);
+        std::wstring url(BuildControlOrderURL(URL_BK_ORDER[ORDER_CANCEL][OSTEP_INPUT]));
+        utility::SetHttpCommonHeaderKeepAlive(url, m_cookies_gr, std::wstring(), request);
+        utility::AddItemToURL(PARAM_NAME_CANCEL_ORDER_ID, std::to_wstring(order_id), url);
+        //
+        web::http::client::http_client http_client(url);
+        http_client.request(request).then([this, url, order_id, pwd, callback](web::http::http_response response)
+        {
+            m_last_access_tick_mb = utility::GetTickCountGeneral();
+            m_cookies_gr.Set(response.headers(), url);
+            utility::string_t date_str(response.headers().date());
+            concurrency::streams::istream bodyStream = response.body();
+            concurrency::streams::container_buffer<std::string> inStringBuffer;
+            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, url, order_id, pwd, callback](size_t bytesRead)
+            {
+                // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
+                std::lock_guard<std::recursive_mutex> lock(m_mtx);
+                //
+                const int64_t regist_id
+                    = boost::python::extract<int64_t>(m_python.attr("getStockOrderRegistID")(inStringBuffer.collection(), static_cast<int32_t>(ORDER_CANCEL)));
+                if (regist_id < 0) {
+                    callback(false, RcvResponseStockOrder(), date_str);
+                    return;
+                }
+
+                // 取消実行
+                web::http::http_request request(web::http::methods::POST);
+                std::wstring ex_url(URL_BK_CANCELORDER_EXCUTE);
+                utility::SetHttpCommonHeaderKeepAlive(ex_url, m_cookies_gr, url, request);
+                BuildCancelOrderFormData(order_id, pwd, regist_id, request);
+                web::http::client::http_client http_client(ex_url);
+                http_client.request(request).then([this, ex_url, order_id, callback](web::http::http_response response)
+                {
+                    m_last_access_tick_mb = utility::GetTickCountGeneral();
+                    m_cookies_gr.Set(response.headers(), ex_url);
+                    utility::string_t date_str(response.headers().date());
+                    concurrency::streams::istream bodyStream = response.body();
+                    concurrency::streams::container_buffer<std::string> inStringBuffer;
+                    return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, date_str, order_id, callback](size_t bytesRead)
+                    {
+                        // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
+                        std::lock_guard<std::recursive_mutex> lock(m_mtx);
+                        //
+                        const boost::python::tuple t
+                            = boost::python::extract<boost::python::tuple>(m_python.attr("responseStockOrderExec")(inStringBuffer.collection()));
+                        RcvResponseStockOrder rcv_order;
+                        const bool b_result = ToRcvResponseStockOrderFromResult_responseStockOrderExec(t, rcv_order);
+                        rcv_order.m_order_id = order_id; // 取消responseはなぜか管理用注文番号を保持していない…
+                        callback(b_result, rcv_order, date_str);
                     });
                 });
             });
@@ -488,7 +630,7 @@ void SecuritiesSessionSbi::Login(const std::wstring& uid, const std::wstring& pw
  *  @param  investments_type    株取引所種別
  *  @param  callback            コールバック
  */
-void SecuritiesSessionSbi::CreatePortfolio(const std::vector<uint32_t>& monitoring_code,
+void SecuritiesSessionSbi::CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
                                            eStockInvestmentsType investments_type,
                                            const CreatePortfolioCallback& callback)
 {
@@ -524,6 +666,30 @@ void SecuritiesSessionSbi::FreshOrder(const StockOrder& order, const std::wstrin
 {
     m_pImpl->FreshOrder(order, pwd, callback);
 }
+
+/*!
+ *  @brief  注文訂正
+ *  @param  order_id    注文番号(管理用)
+ *  @param  order       注文情報
+ *  @param  pwd
+ *  @param  callback    コールバック
+ */
+void SecuritiesSessionSbi::CorrectOrder(int32_t order_id, const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback)
+{
+    m_pImpl->CorrectOrder(order_id, order, pwd, callback);
+}
+
+/*!
+ *  @brief  注文取消
+ *  @param  order_id    注文番号(管理用)
+ *  @param  pwd
+ *  @param  callback    コールバック
+ */
+void SecuritiesSessionSbi::CancelOrder(int32_t order_id, const std::wstring& pwd, const OrderCallback& callback)
+{
+    m_pImpl->CancelOrder(order_id, pwd, callback);
+}
+
 
 /*!
  *  @brief  証券会社サイト最終アクセス時刻取得
