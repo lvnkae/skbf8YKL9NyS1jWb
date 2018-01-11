@@ -7,6 +7,7 @@
 
 #include "environment.h"
 #include "stock_trading_tactics.h"
+#include "trade_container.h"
 #include "trade_struct.h"
 
 #include "lua_accessor.h"
@@ -14,7 +15,6 @@
 #include "utility_datetime.h"
 #include "yymmdd.h"
 
-#include "boost/algorithm/string.hpp"
 #include <functional>
 
 
@@ -31,14 +31,20 @@ private:
 
     //! 無アクセスで取引サイトとのセッションを維持できる時間[分]
     int32_t m_session_keep_minute;  
-    //! 株価更新(取得)間隔[秒]
-    int32_t m_stock_value_inverval_second;
+    //! 監視銘柄情報更新(取得)間隔[秒]
+    int32_t m_stock_monitoring_interval_second;
+    //! 当日約定情報更新(取得)間隔[秒]
+    int32_t m_stock_exec_info_interval_second;
     //! 緊急モード維持秒数(=冷却期間)[秒]
     int32_t m_emergency_cool_second;
     //! 監視銘柄最大登録数
-    int32_t m_max_portfolio_entry;
-    //! 監視に使うポートフォリオ番号
-    int32_t m_use_portfolio_number;
+    int32_t m_max_code_register;
+    //! 銘柄監視に使うポートフォリオ番号
+    int32_t m_use_pf_number_monitoring;
+    //! ポートフォリオ表示形式：監視銘柄
+    int32_t m_pf_indicate_monitoring;
+    //! ポートフォリオ表示形式：保有銘柄
+    int32_t m_pf_indicate_owned;
 
     /*!
      *  @brief  取引種別文字列から列挙子に変換
@@ -150,11 +156,11 @@ private:
      *  @param[out] o_message
      *  @param[out] o_type_str  注文種別文字列格納先
      *  @param[out] o_val_func  価格決定lua関数リファレンス(格納先)
-     *  @param[out] o_volume    株数格納先
+     *  @param[out] o_number    株数格納先
      *  @param[out] o_order     注文データ格納先
      *  @retval     true        成功
      */
-    bool BuildStockTactics_OrderCore(UpdateMessage& o_message, std::string& o_type_str, int32_t& o_val_func, int32_t& o_volume, StockTradingTactics::Order& o_order)
+    bool BuildStockTactics_OrderCore(UpdateMessage& o_message, std::string& o_type_str, int32_t& o_val_func, int32_t& o_number, StockTradingTactics::Order& o_order)
     {
         LuaAccessor& accessor = m_lua_accessor;
         int32_t group_id = 0;
@@ -170,8 +176,8 @@ private:
             o_message.AddErrorMessage("no decide-value function.");
             return false;
         }
-        if (!accessor.GetTableParam("Volume", o_volume)) {
-            o_message.AddErrorMessage("no volume.");
+        if (!accessor.GetTableParam("Quantity", o_number)) {
+            o_message.AddErrorMessage("no quantity.");
             return false;
         }
         BuildStockTactics_OrderCondition(o_message, o_order);
@@ -187,19 +193,19 @@ private:
     {
         std::string command_type_str;
         int32_t val_func = 0;
-        int32_t volume = 0;
+        int32_t number = 0;
         StockTradingTactics::Order order;
-        if (!BuildStockTactics_OrderCore(o_message, command_type_str, val_func, volume, order)) {
+        if (!BuildStockTactics_OrderCore(o_message, command_type_str, val_func, number, order)) {
             return;
         }
         if (command_type_str == "Buy") {
-            order.SetBuy(false, val_func, volume);
+            order.SetBuy(false, val_func, number);
         } else
         if (command_type_str == "BuyLev") {
-            order.SetBuy(true, val_func, volume);
+            order.SetBuy(true, val_func, number);
         } else
         if (command_type_str == "SellLev") {
-            order.SetSell(true, val_func, volume);
+            order.SetSell(true, val_func, number);
         } else {
             o_message.AddErrorMessage("illegal command type(" + command_type_str + ")");
             return;
@@ -217,22 +223,41 @@ private:
     {
         std::string repayment_type_str;
         int32_t val_func = 0;
-        int32_t volume = 0;
-        StockTradingTactics::Order order;
-        if (!BuildStockTactics_OrderCore(o_message, repayment_type_str, val_func, volume, order)) {
+        int32_t number = 0;
+        StockTradingTactics::RepOrder order;
+        if (!BuildStockTactics_OrderCore(o_message, repayment_type_str, val_func, number, order)) {
             return;
         }
         if (repayment_type_str == "Sell") {
-            order.SetSell(false, val_func, volume);
+            order.SetSell(false, val_func, number);
         } else
         if (repayment_type_str == "RepSell") {
-            order.SetSell(true, val_func, volume);
+            order.SetSell(true, val_func, number);
         } else
         if (repayment_type_str == "RepBuy") {
-            order.SetBuy(true, val_func, volume);
+            order.SetBuy(true, val_func, number);
         } else {
             o_message.AddErrorMessage("illegal repayment type(" + repayment_type_str + ")");
             return;
+        }
+        // 建玉指定
+        {
+            LuaAccessor& accessor = m_lua_accessor;
+            bool have_bg = (accessor.OpenChildTable("Bargain") >= 0);
+            if (have_bg) {
+                std::string date_str;
+                if (!accessor.GetTableParam("Date", date_str)) {
+                    o_message.AddErrorMessage("no Bargain.Date.");
+                    return;
+                }
+                float64 value = 0.0;
+                if (!accessor.GetTableParam("Value", value)) {
+                    o_message.AddErrorMessage("no Bargain.Value.");
+                    return;
+                }
+                order.SetBargainInfo(date_str, value);
+            }
+            accessor.CloseTable();
         }
         order.SetUniqueID(o_unique_id++);
         o_tactics.AddRepaymentOrder(order);
@@ -242,12 +267,12 @@ private:
      *  @brief  株取引戦略データ構築：戦略設定1つ分
      *  @param[out] o_message
      *  @param[out] o_unique_id 戦略注文固有ID
-     *  @param[out] o_codes     銘柄コード番号群格納先
+     *  @param[out] o_codes     銘柄コード格納先
      *  @param[out] o_tactics   戦略データ格納先
      */
     bool BuildStockTactics_TacticsUnit(UpdateMessage& o_message,
                                        int32_t& o_unique_id,
-                                       std::vector<uint32_t>& o_codes,
+                                       StockCodeContainer& o_codes,
                                        StockTradingTactics& o_tactics)
     {
         LuaAccessor& accessor = m_lua_accessor;
@@ -258,9 +283,9 @@ private:
             for (int32_t inx = 0; inx < num_code; inx++) {
                 int32_t code = 0;
                 if (accessor.GetArrayParam(inx, code)) {
-                    StockCode scode(code);
+                    StockCode scode(static_cast<uint32_t>(code));
                     if (scode.IsValid()) {
-                        o_codes.emplace_back(scode.GetCode());
+                        o_codes.insert(scode.GetCode());
                     } else {
                         o_message.AddWarningMessage("illegal stock code( " + std::to_string(inx) + "_" + std::to_string(code) + ").");
                     }
@@ -341,10 +366,13 @@ public:
     , m_trading_type(eTradingType::TYPE_NONE)
     , m_securities(eSecuritiesType::SEC_NONE)
     , m_session_keep_minute(0)
-    , m_stock_value_inverval_second(0)
+    , m_stock_monitoring_interval_second(0)
+    , m_stock_exec_info_interval_second(0)
     , m_emergency_cool_second(0)
-    , m_max_portfolio_entry(0)
-    , m_use_portfolio_number(0)
+    , m_max_code_register(0)
+    , m_use_pf_number_monitoring(0)
+    , m_pf_indicate_monitoring(0)
+    , m_pf_indicate_owned(0)
     {
     }
 
@@ -361,21 +389,33 @@ public:
      */
     int32_t GetSessionKeepMinute() const { return m_session_keep_minute; }
     /*!
-     *  @brief  株価格データ更新間隔取得
+     *  @brief  監視銘柄情報更新間隔[秒]取得
      */
-    int32_t GetStockValueIntervalSecond() const { return m_stock_value_inverval_second; }
+    int32_t GetStockMonitoringIntervalSecond() const { return m_stock_monitoring_interval_second; }
     /*!
-     *  @brief  緊急モード秒数(=冷却期間)取得
+     *  @brief  当日約定情報更新間隔[秒]
+     */
+    int32_t GetStockExecInfoIntervalSecond() const { return m_stock_exec_info_interval_second; }
+    /*!
+     *  @brief  緊急モード継続時間(=冷却期間)[秒]取得
      */
     int32_t GetEmergencyCoolSecond() const { return m_emergency_cool_second; }
     /*!
      *  @brief  監視銘柄最大登録数取得
      */
-    int32_t GetMaxPortfolioEntry() const { return m_max_portfolio_entry; }
+    int32_t GetMaxMonitoringCodeRegister() const { return m_max_code_register; }
     /*!
      *  @brief  監視銘柄を登録するポートフォリオ番号取得
      */
-    int32_t GetUsePortfolioNumber() const { return m_use_portfolio_number; }
+    int32_t GetUsePortfolioNumberForMonitoring() const { return m_use_pf_number_monitoring; }
+    /*!
+     *  @brief  ポートフォリオ表示形式(監視銘柄用)取得
+     */
+    int32_t GetPortfolioIndicateForMonitoring() const { return m_pf_indicate_monitoring; }
+    /*!
+     *  @brief  ポートフォリオ表示形式(保有銘柄用)取得
+     */
+    int32_t GetPortfolioIndicateForOwned() const { return m_pf_indicate_owned; }
 
     /*!
      *  @brief  設定読み込み
@@ -401,7 +441,7 @@ public:
         {
             std::string tradingtype_str;
             if (!accessor.GetGlobalParam("TradeType", tradingtype_str)) {
-                o_message.AddErrorMessage("no tradeing type.");
+                o_message.AddErrorMessage("no TradeType.");
                 return false;
             }
             m_trading_type = ToTradingTypeFromString(tradingtype_str);
@@ -409,29 +449,41 @@ public:
         {
             std::string tradingsec_str;
             if (!accessor.GetGlobalParam("TradeSec", tradingsec_str)) {
-                o_message.AddErrorMessage("no securities type.");
+                o_message.AddErrorMessage("no TradeSec.");
                 return false;
             }
             m_securities = ToSecuritiesTypeFromString(tradingsec_str);
         }
         if (!accessor.GetGlobalParam("SessionKeepMinute", m_session_keep_minute)) {
-            o_message.AddErrorMessage("no session_keep_minute.");
+            o_message.AddErrorMessage("no SessionKeepMinute.");
             return false;
         }
-        if (!accessor.GetGlobalParam("StockValueIntervalSecond", m_stock_value_inverval_second)) {
-            o_message.AddErrorMessage("no stock_value_inverval_second.");
+        if (!accessor.GetGlobalParam("StockMonitoringIntervalSecond", m_stock_monitoring_interval_second)) {
+            o_message.AddErrorMessage("no StockMonitoringIntervalSecond.");
+            return false;
+        }
+        if (!accessor.GetGlobalParam("StockExecInfoIntervalSecond", m_stock_exec_info_interval_second)) {
+            o_message.AddErrorMessage("no StockExecInfoIntervalSecond.");
             return false;
         }
         if (!accessor.GetGlobalParam("EmergencyCoolSecond", m_emergency_cool_second)) {
-            o_message.AddErrorMessage("no emergency_cool_second.");
+            o_message.AddErrorMessage("no EmergencyCoolSecond.");
             return false;
         }
-        if (!accessor.GetGlobalParam("MaxPortfolioEntry", m_max_portfolio_entry)) {
-            o_message.AddErrorMessage("no max_portfolio_entry.");
+        if (!accessor.GetGlobalParam("MaxMonitoringCodeRegister", m_max_code_register)) {
+            o_message.AddErrorMessage("no MaxMonitoringCodeRegister.");
             return false;
         }
-        if (!accessor.GetGlobalParam("UsePortfolioNumber", m_use_portfolio_number)) {
-            o_message.AddErrorMessage("no use_portfolio_number.");
+        if (!accessor.GetGlobalParam("UsePortfolioNumber_Monitor", m_use_pf_number_monitoring)) {
+            o_message.AddErrorMessage("no UsePortfolioNumber_Monitor.");
+            return false;
+        }
+        if (!accessor.GetGlobalParam("PortfolioIndicate_Monitor", m_pf_indicate_monitoring)) {
+            o_message.AddErrorMessage("no PortfolioIndicate_Monitor.");
+            return false;
+        }
+        if (!accessor.GetGlobalParam("PortfolioIndicate_Owned", m_pf_indicate_owned)) {
+            o_message.AddErrorMessage("no PortfolioIndicate_Owned.");
             return false;
         }
 
@@ -444,7 +496,7 @@ public:
      *  @param[out] o_message
      *  @param[out] o_holidays  休業日データ格納先
      */
-    bool BuildJPXHoliday(UpdateMessage& o_message, std::vector<MMDD>& o_holidays)
+    bool BuildJPXHoliday(UpdateMessage& o_message, std::vector<garnet::MMDD>& o_holidays)
     {
         LuaAccessor& accessor = m_lua_accessor;
         o_message.AddMessage("[BuildJPXHoliday]");
@@ -454,17 +506,7 @@ public:
         for (int32_t inx = 0; inx < num_holiday; inx++) {
             std::string mmdd_str;
             if (accessor.GetArrayParam(inx, mmdd_str)) {
-                std::vector<std::string> mmdd_split;
-                boost::algorithm::split(mmdd_split, mmdd_str, boost::is_any_of("/"));
-                const int32_t INX_MONTH = 0;
-                const int32_t INX_DAY = 1;
-                const size_t NUM_DATA = 2;
-                if (NUM_DATA == mmdd_split.size()) {
-                    o_holidays.emplace_back(std::stoi(mmdd_split[INX_MONTH]),
-                                            std::stoi(mmdd_split[INX_DAY]));
-                } else {
-                    return false;
-                }
+                o_holidays.emplace_back(std::move(garnet::MMDD::Create(mmdd_str)));
             } else {
                 return false;
             }
@@ -497,12 +539,11 @@ public:
                 std::string mode_str;
                 if (accessor.GetArrayParam(ARRAY_INX_MODE, mode_str)) {
                     std::tm time_work;
-                    if (utility::ToTimeFromString(time_str, "%H:%M", time_work)) {
-                        if (tt.SetMode(mode_str)) {
-                            tt.m_hhmmss.m_hour = time_work.tm_hour;
-                            tt.m_hhmmss.m_minute = time_work.tm_min;
-                            o_tt.push_back(tt);
-                        }
+                    using garnet::utility_datetime::ToTimeFromString;
+                    if (ToTimeFromString(time_str, "%H:%M", time_work) && tt.SetMode(mode_str)) {
+                        tt.m_hhmmss.m_hour = time_work.tm_hour;
+                        tt.m_hhmmss.m_minute = time_work.tm_min;
+                        o_tt.push_back(tt);
                     }
                 }
             }
@@ -534,7 +575,7 @@ public:
         for (int32_t inx = 0; inx < num_tactics; inx++) {
             o_message.AddMessage("<TACTICS" + std::to_string(inx) + ">");
             StockTradingTactics tactics;
-            std::vector<uint32_t> codes;
+            StockCodeContainer codes;
             accessor.OpenChildTable(inx);
             if (BuildStockTactics_TacticsUnit(o_message, order_unique_id, codes, tactics)) {
                 tactics.SetUniqueID(inx);
@@ -613,9 +654,16 @@ int32_t TradeAssistantSetting::GetSessionKeepMinute() const
 /*!
  *  @brief  株価格データ更新間隔取得
  */
-int32_t TradeAssistantSetting::GetStockValueIntervalSecond() const
+int32_t TradeAssistantSetting::GetStockMonitoringIntervalSecond() const
 {
-    return m_pImpl->GetStockValueIntervalSecond();
+    return m_pImpl->GetStockMonitoringIntervalSecond();
+}
+/*!
+ *  @brief  当日約定情報更新間隔取得
+ */
+int32_t TradeAssistantSetting::GetStockExecInfoIntervalSecond() const
+{
+    return m_pImpl->GetStockExecInfoIntervalSecond();
 }
 /*!
  *  @brief  緊急モード秒数(=冷却期間)取得
@@ -627,23 +675,37 @@ int32_t TradeAssistantSetting::GetEmergencyCoolSecond() const
 /*!
  *  @brief  監視銘柄最大登録数取得
  */
-int32_t TradeAssistantSetting::GetMaxPortfolioEntry() const
+int32_t TradeAssistantSetting::GetMaxMonitoringCodeRegister() const
 {
-    return m_pImpl->GetMaxPortfolioEntry();
+    return m_pImpl->GetMaxMonitoringCodeRegister();
 }
 /*!
  *  @brief  監視銘柄を登録するポートフォリオ番号取得
  */
-int32_t TradeAssistantSetting::GetUsePortfolioNumber() const
+int32_t TradeAssistantSetting::GetUsePortfolioNumberForMonitoring() const
 {
-    return m_pImpl->GetUsePortfolioNumber();
+    return m_pImpl->GetUsePortfolioNumberForMonitoring();
+}
+/*!
+ *  @brief  ポートフォリオ表示形式(監視銘柄用)取得
+ */
+int32_t TradeAssistantSetting::GetPortfolioIndicateForMonitoring() const
+{
+    return m_pImpl->GetPortfolioIndicateForMonitoring();
+}
+/*!
+ *  @brief  ポートフォリオ表示形式(保有銘柄用)取得
+ */
+int32_t TradeAssistantSetting::GetPortfolioIndicateForOwned() const
+{
+    return m_pImpl->GetPortfolioIndicateForOwned();
 }
 
 /*!
  *  @brief  JPXの固有休業日か
  *  @param  src 調べる日
  */
-bool TradeAssistantSetting::BuildJPXHoliday(UpdateMessage& o_message, std::vector<MMDD>& o_holidays)
+bool TradeAssistantSetting::BuildJPXHoliday(UpdateMessage& o_message, std::vector<garnet::MMDD>& o_holidays)
 {
     return m_pImpl->BuildJPXHoliday(o_message, o_holidays);
 }

@@ -8,9 +8,11 @@
 
 #include <string>
 
+namespace garnet
+{
 class RandomGenerator;
 
-namespace utility
+namespace utility_string
 {
 
 /*!
@@ -23,13 +25,11 @@ namespace utility
 void GetRandomString(RandomGenerator& rnd_gen, size_t len, std::string& o_string);
 
 /*!
- *  @brief  ランダムなASCII文字列を得る
- *  @param[in]  rnd_gen 乱数生成器
- *  @param[in]  len     文字数
- *  @param[out] o_str   格納先
- *  @note   ASCIIの数字・英字(大小)の文字列を得る。記号は含まない。
+ *  @brief  string→wstringコピー
+ *  @param  src 入力文字列
+ *  @note   文字コードは一切考慮しないただのコピー
  */
-void GetRandomString(RandomGenerator& rnd_gen, size_t len, std::string& o_string);
+std::wstring ToWstring(const std::string& src);
 
 /*!
  *  @brief  大文字→小文字変換
@@ -56,6 +56,7 @@ std::wstring ToWstringOrder(float64 src, uint32_t order);
  *  @return 文字列
  *  @note   上位桁は*で埋める
  */
-std::wstring ToSecuretIDOrder(int32_t src, uint32_t order);
+std::wstring ToSecretIDOrder(int32_t src, uint32_t order);
 
-} // namespace utility
+} // namespace utility_string
+} // namespace garnet

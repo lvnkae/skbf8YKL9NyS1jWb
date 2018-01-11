@@ -5,16 +5,19 @@
  */
 #pragma once
 
+#include "trade_container.h"
 #include "trade_define.h"
+
 #include <functional>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
+
+namespace garnet { struct YYMMDD; }
 
 namespace trading
 {
 
+struct StockExecInfoAtOrder;
 struct StockOrder;
 struct RcvStockValueData;
 struct RcvResponseStockOrder;
@@ -22,10 +25,11 @@ struct RcvResponseStockOrder;
 class SecuritiesSession
 {
 public:
-    typedef std::function<void (bool b_result, bool b_login, bool b_important_msg, const std::wstring&)> LoginCallback;
-    typedef std::function<void (bool b_result, const std::unordered_map<uint32_t, std::wstring>&)> CreatePortfolioCallback;
-    typedef std::function<void (bool b_result)> TransmitPortfolioCallback;
+    typedef std::function<void (bool b_result, bool, bool, const std::wstring&)> LoginCallback;
+    typedef std::function<void (bool b_result, const StockBrandContainer&)> RegisterMonitoringCodeCallback;
+    typedef std::function<void (bool b_result, const SpotTradingsStockContainer&, const StockPositionContainer&)> GetStockOwnedCallback;
     typedef std::function<void (bool b_result, const std::wstring&, const std::vector<RcvStockValueData>&)> UpdateValueDataCallback;
+    typedef std::function<void (bool b_result, const std::vector<StockExecInfoAtOrder>&)> UpdateStockExecInfoCallback;
     typedef std::function<void (bool b_result, const RcvResponseStockOrder&, const std::wstring&)> OrderCallback;
 
     /*!
@@ -45,33 +49,51 @@ public:
      *  @param  callback    コールバック
      */
     virtual void Login(const std::wstring& uid, const std::wstring& pwd, const LoginCallback& callback) = 0;
+
     /*!
-     *  @brief  ポートフォリオ作成
-     *  @param  monitoring_code     監視銘柄
+     *  @brief  監視銘柄コード登録
+     *  @param  monitoring_code     監視銘柄コード
      *  @param  investments_type    株取引所種別
      *  @param  callback            コールバック
      */
-    virtual void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
-                                 eStockInvestmentsType investments_type,
-                                 const CreatePortfolioCallback& callback) = 0;
+    virtual void RegisterMonitoringCode(const StockCodeContainer& monitoring_code,
+                                        eStockInvestmentsType investments_type,
+                                        const RegisterMonitoringCodeCallback& callback) = 0;
     /*!
-     *  @brief  ポートフォリオ転送
-     *  @param  callback    コールバック
-     *  @note   SBIでしか使わないはず
+     *  @brief  保有株式情報取得
      */
-    virtual void TransmitPortfolio(const TransmitPortfolioCallback& callback) = 0;
+    virtual void GetStockOwned(const GetStockOwnedCallback& callback) = 0;
+
     /*!
-     *  @brief  価格データ更新
+     *  @brief  監視銘柄価格データ取得
      *  @param  callback    コールバック
      */
     virtual void UpdateValueData(const UpdateValueDataCallback& callback) = 0;
     /*!
-     *  @brief  新規売買注文
+     *  @brief  約定情報取得取得
+     */
+    virtual void UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback) = 0;
+
+    /*!
+     *  @brief  売買注文
+     *  @param  order       注文情報
+     *  @param  pwd
+     *  @param  callback    コールバック
+     *  @note   現物売買/信用新規売買
+     */
+    virtual void BuySellOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) = 0;
+    /*!
+     *  @brief  信用返済注文
+     *  @param  t_yymmdd    建日
+     *  @param  t_value     建単価
      *  @param  order       注文情報
      *  @param  pwd
      *  @param  callback    コールバック
      */
-    virtual void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) = 0;
+    virtual void RepaymentLeverageOrder(const garnet::YYMMDD& t_yymmdd, float64 t_value,
+                                        const StockOrder& order,
+                                        const std::wstring& pwd,
+                                        const OrderCallback& callback) = 0;
     /*!
      *  @brief  注文訂正
      *  @param  order_id    注文番号(管理用)
@@ -88,18 +110,6 @@ public:
      */
     virtual void CancelOrder(int32_t order_id, const std::wstring& pwd, const OrderCallback& callback) = 0;
 
-    /*!
-     *  @brief  保有株式情報更新
-     */
-    virtual void UpdateStockOwned() = 0;
-    /*!
-     *  @brief  保有株売却注文
-     */
-    virtual void CloseLong(const StockOrder& order) = 0;
-    /*!
-     *  @brief  買い戻し注文
-     */
-    virtual void CloseShort(const StockOrder& order) = 0;
 
     /*!
      *  @brief  証券会社サイト最終アクセス時刻取得
@@ -108,6 +118,7 @@ public:
     virtual int64_t GetLastAccessTime() const = 0;
 
 private:
+    SecuritiesSession(const SecuritiesSession&&);
     SecuritiesSession(const SecuritiesSession&);
     SecuritiesSession& operator= (const SecuritiesSession&);
 };

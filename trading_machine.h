@@ -46,6 +46,7 @@ protected:
 
 private:
     TradingMachine(const TradingMachine&);
+    TradingMachine(const TradingMachine&&);
     TradingMachine& operator= (const TradingMachine&);
 };
 

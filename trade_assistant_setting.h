@@ -13,7 +13,7 @@
 #include <vector>
 #include <unordered_map>
 
-struct MMDD;
+namespace garnet { struct MMDD; }
 class UpdateMessage;
 
 namespace trading
@@ -56,15 +56,28 @@ public:
      *  @brief  株価格データ更新間隔取得
      *  @return 更新間隔[秒]
      */
-    int32_t GetStockValueIntervalSecond() const;
+    int32_t GetStockMonitoringIntervalSecond() const;
+    /*!
+     *  @brief  当日約定情報更新間隔取得
+     *  @return 更新間隔[秒]
+     */
+    int32_t GetStockExecInfoIntervalSecond() const;
     /*!
      *  @brief  監視銘柄最大登録数取得
      */
-    int32_t GetMaxPortfolioEntry() const;
+    int32_t GetMaxMonitoringCodeRegister() const;
     /*!
-     *  @brief  監視銘柄を登録するポートフォリオ番号取得
+     *  @brief  銘柄監視に使用するポートフォリオ番号取得
      */
-    int32_t GetUsePortfolioNumber() const;
+    int32_t GetUsePortfolioNumberForMonitoring() const;
+    /*!
+     *  @brief  ポートフォリオ表示形式(監視銘柄用)取得
+     */
+    int32_t GetPortfolioIndicateForMonitoring() const;
+    /*!
+     *  @brief  ポートフォリオ表示形式(保有銘柄用)取得
+     */
+    int32_t GetPortfolioIndicateForOwned() const;
 
     /*!
      *  @brief  JPXの固有休業日データ構築
@@ -73,7 +86,7 @@ public:
      *  @retval true    成功
      *  @note   luaにアクセスする都合上constにできない
      */
-    bool BuildJPXHoliday(UpdateMessage& o_message, std::vector<MMDD>& o_holidays);
+    bool BuildJPXHoliday(UpdateMessage& o_message, std::vector<garnet::MMDD>& o_holidays);
     /*!
      *  @brief  株取引タイムテーブル構築
      *  @param[out] o_message

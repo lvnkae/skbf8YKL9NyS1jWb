@@ -9,6 +9,10 @@
 #include <string>
 #include "boost/python.hpp"
 
+namespace garnet
+{
+namespace utility_python
+{
 /*!
  *  @brief  pythonのスクリプトを使えるようにする
  *  @param  python_home     pythonのインストールパス(full)
@@ -25,3 +29,6 @@ boost::python::api::object PreparePythonScript(PYCHAR* python_home, const std::s
  *  @note   boost::pythonはpythonが投げてきた例外(主にスクリプト内で発生したエラー)を出力する
  */
 void OutputPythonError(boost::python::error_already_set& e);
+
+} // namespace utility_python
+} // namespace garnet

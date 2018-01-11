@@ -7,6 +7,9 @@
 
 #include <memory>
 
+namespace garnet
+{
+
 /*!
  *  @brief  "64bit•„†‚È‚µ®”"”ÍˆÍ‚Ìˆê—l—”¶¬Ší
  *  @note   EMT‚Ìˆê—l—”
@@ -43,3 +46,5 @@ private:
     class PIMPL;
     std::unique_ptr<PIMPL> m_pImpl;
 };
+
+} // namespace garnet

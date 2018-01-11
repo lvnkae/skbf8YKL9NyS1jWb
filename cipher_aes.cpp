@@ -5,13 +5,16 @@
  */
 #include "cipher_aes.h"
 
+#include "utility_string.h"
+
 #include "aes.h"
 #include "dh.h"
 #include "modes.h"
 #include "osrng.h"
-
 #include <codecvt>
-#include "utility_string.h"
+
+namespace garnet
+{
 
 class CipherAES::PIMPL
 {
@@ -50,8 +53,8 @@ public:
             return false;
         }
 
-        utility::GetRandomString(rnd_gen, CryptoPP::AES::DEFAULT_KEYLENGTH, m_key);
-        utility::GetRandomString(rnd_gen, CryptoPP::AES::BLOCKSIZE, m_iv);
+        utility_string::GetRandomString(rnd_gen, CryptoPP::AES::DEFAULT_KEYLENGTH, m_key);
+        utility_string::GetRandomString(rnd_gen, CryptoPP::AES::BLOCKSIZE, m_iv);
 
         // à√çÜâªÇÃÇΩÇﬂÇÃïœä∑ÉtÉBÉãÉ^ÇÃçÏê¨
         m_encryption.SetKeyWithIV(reinterpret_cast<const byte*>(m_key.c_str()), m_key.length(),
@@ -132,7 +135,9 @@ bool CipherAES::Decrypt(std::wstring& dst) const
     bool result = m_pImpl->Decrypt(str_work);
     if (result) {
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
-        dst = utfconv.from_bytes(str_work.c_str());
+        dst = std::move(utfconv.from_bytes(str_work));
     }
     return result;
 }
+
+} // namespace garnet

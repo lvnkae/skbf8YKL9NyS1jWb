@@ -46,7 +46,7 @@ void StockTradingTactics::AddFreshOrder(const Order& order)
  *  @brief  返済注文を追加
  *  @param  order   発注設定
  */
-void StockTradingTactics::AddRepaymentOrder(const Order& order)
+void StockTradingTactics::AddRepaymentOrder(const RepOrder& order)
 {
     m_repayment.emplace_back(order);
 }
@@ -59,8 +59,8 @@ void StockTradingTactics::AddRepaymentOrder(const Order& order)
  *  @param  valuedata   価格データ(1銘柄分)
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
-bool StockTradingTactics::Trigger::Judge(const HHMMSS& hhmmss,
-                                         const StockPortfolio& valuedata,
+bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& hhmmss,
+                                         const StockValueData& valuedata,
                                          TradeAssistantSetting& script_mng) const
 {
     if (valuedata.m_value_data.empty()) {
@@ -75,7 +75,7 @@ bool StockTradingTactics::Trigger::Judge(const HHMMSS& hhmmss,
                 // 0除算対策(error)
                 // 上場初日だけは前日終値が存在しない(が大半はエラー)
                 return false;
-            }
+            }   
             float64 v_high = 0.f;   // 期間高値
             float64 v_low = 0.f;    // 期間安値
             float64 v_open = 0.f;   // 期間始値
@@ -89,7 +89,7 @@ bool StockTradingTactics::Trigger::Judge(const HHMMSS& hhmmss,
                 for (auto rit = valuedata.m_value_data.rbegin(); rit != valuedata.m_value_data.rend(); ++rit) {
                     if ((pastsec - rit->m_hhmmss.GetPastSecond()) <= rangesec) {
                         // 出来高なし(=データ先頭)なら前日終値を現値とする
-                        const float64 v_now = (rit->m_number == 0) ?valuedata.m_close
+                        const float64 v_now = (rit->m_volume == 0) ?valuedata.m_close
                                                                    :rit->m_value;
                         v_high = std::max(v_high, v_now);
                         v_low  = (static_cast<int32_t>(v_low) == 0) ?v_now
@@ -124,7 +124,7 @@ bool StockTradingTactics::Trigger::Judge(const HHMMSS& hhmmss,
         {
             const auto& latest = valuedata.m_value_data.back();
             // 出来高なしなら判定しない(データ先頭のみ時間記録用に存在し得る)
-            if (latest.m_number > 0) {
+            if (latest.m_volume > 0) {
                 float64 lvalue = latest.m_value;
                 return script_mng.CallJudgeFunction(m_signed_param,
                                                     lvalue,
@@ -140,34 +140,41 @@ bool StockTradingTactics::Trigger::Judge(const HHMMSS& hhmmss,
 
 /*!
  *  @brief  戦略解釈
+ *  @param  investments     現在取引所種別
  *  @param  hhmmss          現在時分秒
  *  @param  em_group        緊急モード対象グループ<戦略グループID>
  *  @param  valuedata       価格データ(1銘柄分)
  *  @param  script_mng      外部設定(スクリプト)管理者
  *  @param  enqueue_func    命令をキューに入れる関数
  */
-void StockTradingTactics::Interpret(const HHMMSS& hhmmss,
+void StockTradingTactics::Interpret(eStockInvestmentsType investments,
+                                    const garnet::HHMMSS& hhmmss,
                                     const std::unordered_set<int32_t>& em_group,
-                                    const StockPortfolio& valuedata,
+                                    const StockValueData& valuedata,
                                     TradeAssistantSetting& script_mng,
                                     const EnqueueFunc& enqueue_func) const
 {
     const StockCode& s_code(valuedata.m_code);
+    const bool b_pts = investments == INVESTMENTS_PTS;
 
     // 緊急モード判定
     for (const auto& emg: m_emergency) {
         if (!emg.Judge(hhmmss, valuedata, script_mng)) {
             continue;
         }
-        StockTradingCommand emergency_command(s_code,
+        std::shared_ptr<StockTradingCommand> command_ptr(
+            new StockTradingCommand_Emergency(s_code,
                                               m_unique_id,
-                                              emg.RefTargetGroup());
-        enqueue_func(emergency_command);
+                                              emg.RefTargetGroup()));
+        enqueue_func(command_ptr);
     }
     // 新規注文判定
     for (const auto& order: m_fresh) {
         if (em_group.end() != em_group.find(order.GetGroupID())) {
             continue; // 緊急モード制限中
+        }
+        if (b_pts && order.GetIsLeverage()) {
+            continue; // PTS中は信用不可
         }
         if (!order.Judge(hhmmss, valuedata, script_mng)) {
             continue;
@@ -180,22 +187,26 @@ void StockTradingTactics::Interpret(const HHMMSS& hhmmss,
                                                               valuedata.m_close);
         const trading::eOrderType otype = (order.GetType() == BUY) ?ORDER_BUY 
                                                                    :ORDER_SELL;
-        StockTradingCommand order_command(s_code,
-                                          m_unique_id,
-                                          order.GetGroupID(),
-                                          order.GetUniqueID(),
-                                          static_cast<int32_t>(otype),
-                                          static_cast<int32_t>(CONDITION_NONE), // >ToDo< 条件対応
-                                          order.GetIsLeverage(),
-                                          order.GetVolume(),
-                                          value);
-        enqueue_func(order_command);
+        std::shared_ptr<StockTradingCommand> command_ptr(
+            new StockTradingCommand_BuySellOrder(investments,
+                                                 s_code,
+                                                 m_unique_id,
+                                                 order.GetGroupID(),
+                                                 order.GetUniqueID(),
+                                                 otype,
+                                                 CONDITION_NONE, // >ToDo< 条件対応
+                                                 order.GetIsLeverage(),
+                                                 order.GetNumber(),
+                                                 value));
+        enqueue_func(command_ptr);
     }
     // 返済注文判定
     for (const auto& order: m_repayment) {
-#if 0
-        if (b_emergency && !order.IsForEmergency()) {
-            continue;
+        if (em_group.end() != em_group.find(order.GetGroupID())) {
+            continue; // 緊急モード制限中
+        }
+        if (b_pts && order.GetIsLeverage()) {
+            continue; // PTS中は信用不可
         }
         if (!order.Judge(hhmmss, valuedata, script_mng)) {
             continue;
@@ -206,23 +217,37 @@ void StockTradingTactics::Interpret(const HHMMSS& hhmmss,
                                                               valuedata.m_high,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
-        StockTradingCommand order_command(StockTradingCommand::ORDER,
-                                          s_code,
-                                          valuedata.m_name,
-                                          m_unique_id,
-                                          order.GetGroupID());
-        {
-            trading::eOrderType otype = order.GetType() == BUY ?ORDER_BUY :ORDER_SELL;
-            order_command.SetOrderParam(static_cast<int32_t>(otype),
-                                        static_cast<int32_t>(CONDITION_NONE), // >ToDo< 条件対応
-                                        static_cast<uint32_t>(order.GetVolume()),
-                                        value,
-                                        order.GetIsLeverage());
+        std::shared_ptr<StockTradingCommand> command_ptr;
+        if (!order.GetIsLeverage()) {
+            // 現物売
+            command_ptr.reset(new StockTradingCommand_BuySellOrder(investments,
+                                                                   s_code,
+                                                                   m_unique_id,
+                                                                   order.GetGroupID(),
+                                                                   order.GetUniqueID(),
+                                                                   ORDER_SELL,
+                                                                   CONDITION_NONE, // >ToDo< 条件対応
+                                                                   order.GetIsLeverage(),
+                                                                   order.GetNumber(),
+                                                                   value));
+        } else {
+            // 信用返済売買
+            const trading::eOrderType otype = (order.GetType() == BUY) ?ORDER_REPBUY
+                                                                       :ORDER_REPSELL;
+            command_ptr.reset(new StockTradingCommand_RepLevOrder(investments,
+                                                                  s_code,
+                                                                  m_unique_id,
+                                                                  order.GetGroupID(),
+                                                                  order.GetUniqueID(),
+                                                                  otype,
+                                                                  CONDITION_NONE, // >ToDo< 条件対応
+                                                                  order.GetNumber(),
+                                                                  value,
+                                                                  order.GetBargainDate(),
+                                                                  order.GetBargainValue()));
         }
-        enqueue_func(m_unique_id, order_command);
-#endif
+        enqueue_func(command_ptr);
     }
 }
-
 
 } // namespace trading

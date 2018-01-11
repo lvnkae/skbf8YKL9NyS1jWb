@@ -15,6 +15,8 @@
 #include "cpprest/oauth1.h"
 #include <codecvt>
 
+namespace garnet
+{
 namespace twitter
 {
 
@@ -71,7 +73,7 @@ public:
         }
 
         web::http::http_request request(web::http::methods::POST);
-        utility::SetHttpCommonHeaderSimple(request);
+        utility_http::SetHttpCommonHeaderSimple(request);
         web::http::oauth1::experimental::oauth1_config oa1_conf(m_consumer_key,
                                                                 m_consumer_secret,
                                                                 L"https://api.twitter.com/oauth/request_token",
@@ -86,8 +88,8 @@ public:
         //
         std::wstring enc_src(std::move(web::uri::encode_data_string(src))); // tweet文字列はURLエンコードしておく
         std::wstring form_data;
-        utility::AddFormDataParamToString(L"status", enc_src, form_data);
-        utility::SetFormData(form_data, request);
+        utility_http::AddFormDataParamToString(L"status", enc_src, form_data);
+        utility_http::SetFormData(form_data, request);
         //
         web::http::client::http_client http_client(L"https://api.twitter.com/1.1/statuses/update.json", conf);
         http_client.request(request);
@@ -140,7 +142,8 @@ bool TwitterSessionForAuthor::Tweet(const std::wstring& date, const std::wstring
 {
     if (date.empty()) {
         // 日時指定されてなかったらシステム時間を入れる
-        std::wstring lc_date(std::move(utility::GetLocalMachineTime(L"%a, %d %b %Y %H:%M:%S JST")));
+        using utility_datetime::GetLocalMachineTime;
+        const std::wstring lc_date(std::move(GetLocalMachineTime(L"%a, %d %b %Y %H:%M:%S JST")));
         return m_pImpl->Tweet(lc_date + twitter::GetNewlineString() + src);
     } else {
         return m_pImpl->Tweet(date + twitter::GetNewlineString() + src);
@@ -150,3 +153,5 @@ bool TwitterSessionForAuthor::Tweet(const std::wstring& src)
 {
     return m_pImpl->Tweet(src);
 }
+
+} // namespace garnet

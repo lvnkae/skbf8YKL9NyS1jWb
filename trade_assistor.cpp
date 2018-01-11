@@ -29,8 +29,8 @@ private:
     TradeAssistantSetting m_setting;            //!< 外部設定管理
     std::unique_ptr<TradingMachine> m_pMachine; //!< トレードマシン
 
-    //!< twetterセッション
-    std::shared_ptr<TwitterSessionForAuthor> m_pTwitterSession;
+    //!< twitterとのセッション
+    std::shared_ptr<garnet::TwitterSessionForAuthor> m_pTwitterSession;
 
 private:
     PIMPL(const PIMPL&);
@@ -52,7 +52,7 @@ private:
         {
         case trading::TYPE_STOCK:
             // 株売買Machine作成
-            m_pMachine.reset(new StockTradingMachine(m_setting.GetSecuritiesType(), m_pTwitterSession));
+            m_pMachine.reset(new StockTradingMachine(m_setting, m_pTwitterSession));
             m_sequence = SEQ_COMPSETTING;
             break;
         default:
@@ -65,7 +65,7 @@ public:
     : m_sequence(SEQ_NONE)
     , m_setting()
     , m_pMachine()
-    , m_pTwitterSession(new TwitterSessionForAuthor())
+    , m_pTwitterSession(new garnet::TwitterSessionForAuthor())
     {
     }
 
@@ -106,7 +106,7 @@ public:
     }
 
     /*!
-     *  @brief  定期更新処理
+     *  @brief  Update関数
      */
     void Update(int64_t tickCount, UpdateMessage& o_message)
     {

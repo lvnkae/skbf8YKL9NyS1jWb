@@ -26,53 +26,60 @@ private:
         SEQ_READY,  //!< 準備OK
     };
 
-    const int64_t m_session_keep_ms;                        //!< 証券会社とのセッションを無アクセスで維持できる時間(ms)
-    std::shared_ptr<SecuritiesSession> m_pSecSession;       //!< 証券会社とのセッション
-    std::shared_ptr<TwitterSessionForAuthor> m_pTwSession;  //!< twitterとのセッション(メッセージ通知用)
+    //!< 証券会社とのセッションを無アクセスで維持できる時間[ミリ秒]
+    const int64_t m_session_keep_ms;
+    //!< 証券会社とのセッション
+    std::shared_ptr<SecuritiesSession> m_pSecSession;
+    //!< twitterとのセッション(メッセージ通知用)
+    std::shared_ptr<garnet::TwitterSessionForAuthor> m_pTwSession;
 
     eSequence m_sequence;                                   //!< シーケンス
-    eStockInvestmentsType m_last_portfolior_investments;    //!< 最後に作ったポートフォリオの対象取引所種別
+    eStockInvestmentsType m_last_register_investments;      //!< 最後に監視銘柄を登録した取引所種別
 
     /*!
-     *  @brief  ポートフォリオ作成
-     *  @param  monitoring_code     監視銘柄
-     *  @param  investments_type    取引所種別
-     *  @param  init_portfolio      ポートフォリオ初期化関数
+     *  @brief  保有銘柄取得
+     *  @param  update_func 保有銘柄更新関数
      */
-    void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
-                         eStockInvestmentsType investments_type,
-                         const InitPortfolioFunc& init_portfolio)
+     void GetStockOwned(const UpdateStockHoldingsFunc& update_func)
+     {
+        m_pSecSession->GetStockOwned([this,update_func](bool b_result,
+                                                        const SpotTradingsStockContainer& spot,
+                                                        const StockPositionContainer& position)
+        {
+            if (b_result) {
+                m_sequence = SEQ_READY;
+                update_func(spot, position);
+            }
+            // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
+        });
+     }
+    /*!
+     *  @brief  監視銘柄コード登録
+     *  @param  monitoring_code     監視銘柄コード
+     *  @param  investments_type    取引所種別
+     *  @param  init_func           監視銘柄初期化関数
+     *  @param  update_func         保有銘柄更新関数
+     */
+    void RegisterMonitoringCode(const StockCodeContainer& monitoring_code,
+                                eStockInvestmentsType investments_type,
+                                const InitMonitoringBrandFunc& init_func,
+                                const UpdateStockHoldingsFunc& update_func)
     {
-        if (m_last_portfolior_investments != investments_type) {
-            m_pSecSession->CreatePortfolio(monitoring_code,
-                                           investments_type,
-                                           [this, 
-                                            investments_type,
-                                            init_portfolio](bool b_result,
-                                                            const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)
+        // 前回と同じ取引所なので登録不要
+        if (m_last_register_investments != investments_type) {
+            m_pSecSession->RegisterMonitoringCode(monitoring_code, investments_type,
+                                                  [this, investments_type, init_func, update_func]
+                                                  (bool b_result, const StockBrandContainer& rcv_brand)
             {
-                bool b_valid = false;
-                if (b_result) {
-                    b_valid = init_portfolio(investments_type, rcv_portfolio);
+                if (b_result && init_func(investments_type, rcv_brand)) {
+                    GetStockOwned(update_func);
                 }
-                if (b_valid) {
-                    m_pSecSession->TransmitPortfolio([this](bool b_result)
-                    {
-                        if (b_result) {
-                            m_sequence = SEQ_READY;
-                        } else {
-                            // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
-                        }
-                    });
-                } else {
-                    // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
-                }
+                // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
             });
-            m_last_portfolior_investments = investments_type;
+            m_last_register_investments = investments_type;
             m_sequence = SEQ_BUSY;
         } else {
-            // 前回と同じ取引所なので作成不要
-            m_sequence = SEQ_READY;
+            GetStockOwned(update_func);
         }
     }
 
@@ -83,13 +90,13 @@ public:
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     PIMPL(const std::shared_ptr<SecuritiesSession>& sec_session,
-          const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+          const std::shared_ptr<garnet::TwitterSessionForAuthor>& tw_session,
           const TradeAssistantSetting& script_mng)
-    : m_session_keep_ms(utility::ToMiliSecondsFromMinute(script_mng.GetSessionKeepMinute()))
+    : m_session_keep_ms(garnet::utility_datetime::ToMiliSecondsFromMinute(script_mng.GetSessionKeepMinute()))
     , m_pSecSession(sec_session)
     , m_pTwSession(tw_session)
     , m_sequence(SEQ_NONE)
-    , m_last_portfolior_investments(INVESTMENTS_NONE)
+    , m_last_register_investments(INVESTMENTS_NONE)
     {
     }
 
@@ -107,17 +114,19 @@ public:
      *  @param  tickCount           経過時間[ミリ秒]
      *  @param  aes_uid
      *  @param  aes_pwd
-     *  @param  monitoring_code     監視銘柄
+     *  @param  monitoring_code     監視銘柄コード
      *  @param  investments_type    取引所種別
-     *  @param  init_portfolio      ポートフォリオ初期化関数
+     *  @param  init_func           監視銘柄初期化関数:
+     *  @param  update_func         保有銘柄更新関数
      *  @retval true                成功
      */
     bool Start(int64_t tickCount,
-               const CipherAES& aes_uid,
-               const CipherAES& aes_pwd,
-               const std::unordered_set<uint32_t>& monitoring_code,
+               const garnet::CipherAES& aes_uid,
+               const garnet::CipherAES& aes_pwd,
+               const StockCodeContainer& monitoring_code,
                eStockInvestmentsType investments_type,
-               const InitPortfolioFunc& init_portfolio)
+               const InitMonitoringBrandFunc& init_func,
+               const UpdateStockHoldingsFunc& update_func)
     {
         if (m_sequence != SEQ_NONE && m_sequence != SEQ_READY) {
             return false; // 開始処理中
@@ -130,12 +139,10 @@ public:
             aes_uid.Decrypt(uid);
             aes_pwd.Decrypt(pwd);
             m_pSecSession->Login(uid, pwd,
-                                 [this, monitoring_code,
-                                        investments_type,
-                                        init_portfolio](bool b_result,
-                                                        bool b_login,
-                                                        bool b_important_msg,
-                                                        const std::wstring& sv_date)
+                                 [this, monitoring_code, investments_type,
+                                  update_func, init_func]
+                                  (bool b_result, bool b_login, bool b_important_msg,
+                                   const std::wstring& sv_date)
             {
                 if (!b_result) {
                     m_pTwSession->Tweet(sv_date, L"ログインエラー。緊急メンテナンス中かもしれません。");
@@ -148,13 +155,15 @@ public:
                     } else {
                         m_pTwSession->Tweet(sv_date, L"ログインしました");
                     }
-                    // ポートフォリオ作成
-                    CreatePortfolio(monitoring_code, investments_type, init_portfolio);
+                    // 監視銘柄登録
+                    RegisterMonitoringCode(monitoring_code,
+                                           investments_type,
+                                           init_func, update_func);
                 }
             });
             m_sequence = SEQ_BUSY;
         } else {
-            CreatePortfolio(monitoring_code, investments_type, init_portfolio);
+            RegisterMonitoringCode(monitoring_code, investments_type, init_func, update_func);
         }
         return true;
     }
@@ -166,7 +175,7 @@ public:
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
 StockTradingStarterSbi::StockTradingStarterSbi(const std::shared_ptr<SecuritiesSession>& sec_session,
-                                               const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+                                               const std::shared_ptr<garnet::TwitterSessionForAuthor>& tw_session,
                                                const TradeAssistantSetting& script_mng)
 : StockTradingStarter()
 , m_pImpl(new PIMPL(sec_session, tw_session, script_mng))
@@ -191,18 +200,22 @@ bool StockTradingStarterSbi::IsReady() const
  *  @param  tickCount           経過時間[ミリ秒]
  *  @param  aes_uid
  *  @param  aes_pwd
- *  @param  monitoring_code     監視銘柄
+ *  @param  monitoring_code     監視銘柄コード
  *  @param  investments_type    取引所種別
- *  @param  init_portfolio      ポートフォリオ初期化関数
+ *  @param  init_func           監視銘柄初期化関数
+ *  @param  update_func         保有銘柄更新関数
  */
 bool StockTradingStarterSbi::Start(int64_t tickCount,
-                                   const CipherAES& aes_uid,
-                                   const CipherAES& aes_pwd,
-                                   const std::unordered_set<uint32_t>& monitoring_code,
+                                   const garnet::CipherAES& aes_uid,
+                                   const garnet::CipherAES& aes_pwd,
+                                   const StockCodeContainer& monitoring_code,
                                    eStockInvestmentsType investments_type,
-                                   const InitPortfolioFunc& init_portfolio)
+                                   const InitMonitoringBrandFunc& init_func,
+                                   const UpdateStockHoldingsFunc& update_func)
 {
-    return m_pImpl->Start(tickCount, aes_uid, aes_pwd, monitoring_code, investments_type, init_portfolio);
+    return m_pImpl->Start(tickCount,
+                          aes_uid, aes_pwd,
+                          monitoring_code, investments_type, init_func, update_func);
 }
 
 } // namespace trading

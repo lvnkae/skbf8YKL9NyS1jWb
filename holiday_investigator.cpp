@@ -29,7 +29,7 @@ private:
 public:
     PIMPL()
     /* html解析用のpythonブジェクト生成 */
-    : m_python(PreparePythonScript(Environment::GetPythonHome(), "holiday_investigator.py"))
+    : m_python(std::move(garnet::utility_python::PreparePythonScript(Environment::GetPythonHome(), "holiday_investigator.py")))
     , m_callback()
     {
     }
@@ -46,7 +46,7 @@ public:
         m_callback = function;
         //
         web::http::http_request request(web::http::methods::GET);
-        utility::SetHttpCommonHeaderSimple(request);
+        garnet::utility_http::SetHttpCommonHeaderSimple(request);
         web::http::client::http_client http_client(L"https://yonelabo.com/today_holyday/");
         http_client.request(request).then([this](web::http::http_response response)
         {

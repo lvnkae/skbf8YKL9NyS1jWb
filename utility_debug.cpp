@@ -10,7 +10,9 @@
 #include <iostream>
 #endif/* defined(_DEBUG */
 
-namespace utility
+namespace garnet
+{
+namespace utility_debug
 {
 
 /*!
@@ -36,4 +38,5 @@ void DebugOutput(const std::string& str_u8)
 #endif/* _DEBUG */
 }
 
-} // namespace utility
+} // namespace utility_debug
+} // namespace garnet

@@ -8,7 +8,9 @@
 #include "random_generator.h"
 #include <vector>
 
-namespace utility
+namespace garnet
+{
+namespace utility_string
 {
 
 /*!
@@ -45,6 +47,20 @@ void GetRandomString(RandomGenerator& rnd_gen, size_t len, std::string& o_string
     }
 }
 
+/*!
+ *  @brief  string→wstringコピー
+ *  @param  src 入力文字列
+ *  @note   文字コードは一切考慮しないただのコピー
+ */
+std::wstring ToWstring(const std::string& src)
+{
+    std::wstring dst;
+    dst.reserve(src.size());
+    for (char c: src) {
+        dst.push_back(c);
+    }
+    return dst;
+}
 
 /*!
  *  @brief  大文字→小文字変換
@@ -100,7 +116,7 @@ std::wstring ToWstringOrder(float64 src, uint32_t order)
  *  @return 文字列
  *  @note   上位桁は*で埋める
  */
-std::wstring ToSecuretIDOrder(int32_t src, uint32_t order)
+std::wstring ToSecretIDOrder(int32_t src, uint32_t order)
 {
     std::wstring dst(std::to_wstring(src));
     const size_t len = dst.size();
@@ -114,4 +130,5 @@ std::wstring ToSecuretIDOrder(int32_t src, uint32_t order)
 }
 
 
-} // namespace utility
+} // namespace utility_string
+} // namespace garnet

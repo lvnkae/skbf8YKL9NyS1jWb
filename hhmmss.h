@@ -5,6 +5,11 @@
  */
 #pragma once
 
+#include <ctime>
+
+namespace garnet
+{
+
 struct HHMMSS
 {
     int32_t m_hour;
@@ -24,6 +29,8 @@ struct HHMMSS
     , m_second(s)
     {
     }
+
+    HHMMSS(const std::tm&);
 
     /*!
      *  @brief  00:00:00‚©‚ç‚ÌŒo‰ß•b”‚ð“¾‚é
@@ -46,3 +53,5 @@ struct HHMMSS
         return GetPastSecond() > right.GetPastSecond();
     }
 };
+
+} // namespace garnet

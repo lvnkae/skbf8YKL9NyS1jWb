@@ -118,7 +118,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             }
         } else {
             // Å‘¬30ƒtƒŒ[ƒ€‚Å“®ì‚³‚¹‚Ä‚Ý‚é
-            int64_t tickCount = utility::GetTickCountGeneral();
+            int64_t tickCount = garnet::utility_datetime::GetTickCountGeneral();
             if (tickCount - prevTickCount >= UPDATE_INTV_MS) {
                 UpdateMessage trading_message;
                 trade_assistant->Update(tickCount, trading_message);

@@ -7,7 +7,9 @@
 
 #include <string>
 
-namespace utility
+namespace garnet
+{
+namespace utility_debug
 {
 
 /*!
@@ -21,4 +23,5 @@ void DebugOutput(const std::wstring& str_u16);
  */
 void DebugOutput(const std::string& str_u8);
 
-} // namespace utility
+} // namespace utility_debug
+} // namespace garnet

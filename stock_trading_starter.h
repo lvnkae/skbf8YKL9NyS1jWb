@@ -5,21 +5,21 @@
  */
 #pragma once
 
+#include "trade_container.h"
 #include "trade_define.h"
 
 #include <functional>
 #include <vector>
-#include <unordered_map>
-#include <unordered_set>
 
-class CipherAES;
+namespace garnet { class CipherAES; }
 
 namespace trading
 {
 class StockTradingStarter
 {
 public:
-    typedef std::function<bool(eStockInvestmentsType, const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)> InitPortfolioFunc;
+    typedef std::function<bool(eStockInvestmentsType, const StockBrandContainer&)> InitMonitoringBrandFunc;
+    typedef std::function<void(const SpotTradingsStockContainer&, const StockPositionContainer&)> UpdateStockHoldingsFunc;
 
     StockTradingStarter();
     ~StockTradingStarter();
@@ -35,17 +35,19 @@ public:
      *  @param  tickCount           経過時間[ミリ秒]
      *  @param  aes_uid
      *  @param  aes_pwd
-     *  @param  monitoring_code     監視銘柄
+     *  @param  monitoring_code     監視銘柄コード
      *  @param  investments_type    取引所種別
-     *  @param  init_portfolio      ポートフォリオ初期化関数
+     *  @param  init_func           監視銘柄初期化関数
+     *  @param  update_func         保有銘柄更新関数
      *  @retval true                成功
      */
     virtual bool Start(int64_t tickCount,
-                       const CipherAES& aes_uid,
-                       const CipherAES& aes_pwd,
-                       const std::unordered_set<uint32_t>& monitoring_code,
+                       const garnet::CipherAES& aes_uid,
+                       const garnet::CipherAES& aes_pwd,
+                       const StockCodeContainer& monitoring_code,
                        eStockInvestmentsType investments_type,
-                       const InitPortfolioFunc& init_portfolio) = 0;
+                       const InitMonitoringBrandFunc& init_func,
+                       const UpdateStockHoldingsFunc& update_func) = 0;
 
 private:
     StockTradingStarter(const StockTradingStarter&);

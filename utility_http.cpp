@@ -14,7 +14,9 @@
 #include <codecvt>
 #include <iostream>
 
-namespace utility
+namespace garnet
+{
+namespace utility_http
 {
 
 /*!
@@ -113,7 +115,7 @@ void AddItemToURL(const std::wstring& iname, const std::wstring& ivalue, std::ws
 template<typename T>
 void GetDomainFromURCoreL(const T& url, std::string& domain)
 {
-    utility::ToLower(url, domain);
+    utility_string::ToLower(url, domain);
     std::vector<std::string> url_split;
     boost::algorithm::split(url_split, domain, boost::is_any_of("/"));
     const size_t len = url_split.size();
@@ -127,3 +129,4 @@ void GetDomainFromURL(const std::string& url, std::string& domain) { GetDomainFr
 void GetDomainFromURL(const std::wstring& urlT, std::string& domain) { GetDomainFromURCoreL(urlT, domain); }
 
 } // namespace utility
+} // namespace garnet

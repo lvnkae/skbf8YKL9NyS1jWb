@@ -9,6 +9,9 @@
 #include <string>
 #include <memory>
 
+namespace garnet
+{
+
 class RandomGenerator;
 
 /*!
@@ -49,3 +52,5 @@ private:
     class PIMPL;
     std::unique_ptr<PIMPL> m_pImpl;
 };
+
+} // namespace garnet

@@ -34,35 +34,51 @@ public:
      *  @note   mobile→PCの順にログイン
      */
     void Login(const std::wstring& uid, const std::wstring& pwd, const LoginCallback& callback) override;
+
     /*!
-     *  @brief  ポートフォリオ作成
-     *  @param  monitoring_code     監視銘柄
+     *  @brief  監視銘柄コード登録
+     *  @param  monitoring_code     監視銘柄コード
      *  @param  investments_type    株取引所種別
      *  @param  callback            コールバック
-     *  @note   mobileサイトで監視銘柄を登録する
      */
-    void CreatePortfolio(const std::unordered_set<uint32_t>& monitoring_code,
-                         eStockInvestmentsType investments_type,
-                         const CreatePortfolioCallback& callback) override;
+    void RegisterMonitoringCode(const StockCodeContainer& monitoring_code,
+                                eStockInvestmentsType investments_type,
+                                const RegisterMonitoringCodeCallback& callback) override;
     /*!
-     *  @brief  ポートフォリオ転送
-     *  @param  callback    コールバック
-     *  @note   mobileサイトからPCサイトへの転送
-     *  @note   mobileサイトは表示項目が少なすぎるのでPCサイトへ移してそちらから情報を得たい
+     *  @brief  保有株式情報取得
      */
-    void TransmitPortfolio(const TransmitPortfolioCallback& callback) override;
+    void GetStockOwned(const GetStockOwnedCallback& callback) override;
+
     /*!
-     *  @brief  価格データ更新
+     *  @brief  監視銘柄価格データ取得
      *  @param  callback    コールバック
      */
     void UpdateValueData(const UpdateValueDataCallback& callback) override;
     /*!
-     *  @brief  新規売買注文
+     *  @brief  約定情報取得取得
+     */
+    void UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback) override;
+
+    /*!
+     *  @brief  売買注文
+     *  @param  order       注文情報
+     *  @param  pwd
+     *  @param  callback    コールバック
+     *  @note   現物売買/信用新規売買
+     */
+    void BuySellOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) override;
+    /*!
+     *  @brief  信用返済注文
+     *  @param  t_yymmdd    建日
+     *  @param  t_value     建単価
      *  @param  order       注文情報
      *  @param  pwd
      *  @param  callback    コールバック
      */
-    void FreshOrder(const StockOrder& order, const std::wstring& pwd, const OrderCallback& callback) override;
+    void RepaymentLeverageOrder(const garnet::YYMMDD& t_yymmdd, float64 t_value,
+                                const StockOrder& order,
+                                const std::wstring& pwd,
+                                const OrderCallback& callback) override;
     /*!
      *  @brief  注文訂正
      *  @param  order_id    注文番号(管理用)
@@ -79,18 +95,6 @@ public:
      */
     void CancelOrder(int32_t order_id, const std::wstring& pwd, const OrderCallback& callback) override;
 
-    /*!
-     *  @brief  保有株式情報更新
-     */
-    void UpdateStockOwned() override {}
-    /*!
-     *  @brief  保有株売却注文
-     */
-    void CloseLong(const StockOrder& order) override {}
-    /*!
-     *  @brief  買い戻し注文
-     */
-    void CloseShort(const StockOrder& order) override {}
 
     /*!
      *  @brief  証券会社サイト最終アクセス時刻取得

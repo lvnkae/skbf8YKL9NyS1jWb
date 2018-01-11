@@ -1,14 +1,19 @@
 TradeType = "STOCK" -- 取引種別(STOCK/FX/BITCOINなど)
 TradeSec = "SBI" -- 証券会社種別(SBI/KABUDOT/MONEX/NOMURAなど)
 
+-- 証券会社固有値
 SessionKeepMinute = 20 -- 無アクセスで取引サイトとのセッションを維持できる時間[分]
+MaxMonitoringCodeRegister = 50  -- 監視銘柄最大登録数
 
-StockValueIntervalSecond = 10 -- 株価更新(取得)間隔[秒]
-EmergencyCoolSecond = 300 -- 緊急モード維持秒数(=冷却期間)[秒]
+-- ユーザ任意設定
+StockMonitoringIntervalSecond = 10 -- 監視銘柄情報更新(取得)間隔[秒]
+StockExecInfoIntervalSecond = 64 -- 当日約定情報更新(取得)間隔[秒]
+EmergencyCoolSecond = 300 -- 緊急モード継続時間(=冷却期間)[秒]
 
-MaxPortfolioEntry = 50  -- 監視銘柄最大登録数
-UsePortfolioNumber = 0  -- 監視銘柄を登録するポートフォリオ番号
-
+-- 多分SBI専用
+UsePortfolioNumber_Monitor = 0  -- 監視銘柄を登録するポートフォリオ番号
+PortfolioIndicate_Monitor = 5 -- ポートフォリオ表示形式番号：監視銘柄
+PortfolioIndicate_Owned = 6 -- ポートフォリオ表示形式番号：保有銘柄
 
 -- 日本市場固有休業日((土日祝でなくとも休みになる月日)
 JPXHoliday = {
@@ -88,7 +93,7 @@ StockTactics = {
                             end
                         end),
                 -- 発注株数
-                Volume = 100,
+                Quantity = 100,
                 -- 発注条件
                 Condition = {
                     Type = "Formula", -- lua関数で判定
@@ -118,7 +123,7 @@ StockTactics = {
                             end
                         end),
                 -- 発注株数
-                Volume = 100,
+                Quantity = 100,
                 -- 発注条件
                 Condition = {
                     Type = "Formula", -- lua関数で判定
@@ -146,7 +151,7 @@ StockTactics = {
                             return high + diff
                         end),
                 -- 返済株数(負数なら全部)
-                Volume = -1,
+                Quantity = -1,
                 -- 返済条件
                 Condition = {
                     Type = "Formula", -- lua関数で判定
@@ -179,7 +184,7 @@ StockTactics = {
                             return -1
                         end),
                 -- 発注株数
-                Volume = 100,
+                Quantity = 100,
                 -- 発注条件
                 Condition = {
                     Type = "ValueGap", -- 指定秒数以下で指定割合価格変化
@@ -196,7 +201,7 @@ StockTactics = {
                             return -1
                         end),
                 -- 発注株数
-                Volume = 100,
+                Quantity = 100,
                 -- 発注条件
                 Condition = {
                     Type = "ValueGap", -- 指定秒数以下で指定割合価格変化

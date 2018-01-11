@@ -9,6 +9,9 @@
 #include <string>
 #include <memory>
 
+namespace garnet
+{
+
 namespace twitter
 {
 
@@ -48,3 +51,5 @@ private:
     class PIMPL;
     std::unique_ptr<PIMPL> m_pImpl;
 };
+
+} // namespace garnet

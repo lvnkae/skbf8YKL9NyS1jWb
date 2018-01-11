@@ -12,7 +12,9 @@ namespace web { namespace http { class http_request; } }
 namespace web { namespace http { class http_headers; } }
 namespace web { namespace http { class cookies_group; } }
 
-namespace utility
+namespace garnet
+{
+namespace utility_http
 {
 
 /*!
@@ -77,4 +79,5 @@ void AddItemToURL(const std::wstring& iname, const std::wstring& ivalue, std::ws
 void GetDomainFromURL(const std::string& url, std::string& domain);
 void GetDomainFromURL(const std::wstring& urlT, std::string& domain);
 
-} // namespace utility
+} // namespace utility_http
+} // namespace garnet

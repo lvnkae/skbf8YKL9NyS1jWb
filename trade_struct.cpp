@@ -4,6 +4,7 @@
  *  @date   2017/12/21
  */
 #include "trade_struct.h"
+#include "trade_utility.h"
 
 namespace trading
 {
@@ -59,7 +60,46 @@ StockOrder::StockOrder(const RcvResponseStockOrder& rcv)
 , m_b_market_order(false)
 , m_type(rcv.m_type)
 , m_condition(CONDITION_NONE)
-, m_investiments(rcv.m_investments)
+, m_investments(rcv.m_investments)
+{
+}
+
+/*!
+ *  @note   RcvResponseStockOrder‚Æ‚Ì”äŠr
+ */
+bool StockOrder::operator==(const RcvResponseStockOrder& right) const
+{
+    return (m_code.GetCode() == right.m_code &&
+            m_type == right.m_type &&
+            m_investments == right.m_investments &&
+            ((m_b_leverage && right.m_b_leverage) || (!m_b_leverage && !right.m_b_leverage)) &&
+            trade_utility::same_value(m_value, right.m_value) &&
+            m_number == right.m_number);
+}
+
+/*!
+ */
+RcvResponseStockOrder::RcvResponseStockOrder()
+: m_order_id(trade_utility::BlankOrderID())
+, m_user_order_id(trade_utility::BlankOrderID())
+, m_type(ORDER_NONE)
+, m_investments(INVESTMENTS_NONE)
+, m_code(StockCode().GetCode())
+, m_number(0)
+, m_value(0.0)
+, m_b_leverage(false)
+{
+}
+
+/*!
+ */
+StockExecInfoAtOrderHeader::StockExecInfoAtOrderHeader()
+: m_user_order_id(trade_utility::BlankOrderID())
+, m_type(ORDER_NONE)
+, m_investments(INVESTMENTS_NONE)
+, m_code(StockCode().GetCode())
+, m_b_leverage(false)
+, m_b_complete(false)
 {
 }
 

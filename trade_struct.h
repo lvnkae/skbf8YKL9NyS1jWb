@@ -5,10 +5,14 @@
  */
 #pragma once
 
-#include "hhmmss.h"
 #include "trade_define.h"
 #include "stock_code.h"
+
+#include "hhmmss.h"
+#include "yymmdd.h"
+
 #include <string>
+#include <vector>
 
 namespace trading
 {
@@ -28,8 +32,8 @@ struct StockTimeTableUnit
         PTS,    //!< 私設取引所で売買
     };
 
-    HHMMSS m_hhmmss;//!< 時分秒
-    eMode m_mode;   //!< モード
+    garnet::HHMMSS m_hhmmss;//!< 時分秒
+    eMode m_mode;           //!< モード
 
     StockTimeTableUnit()
     : m_hhmmss()
@@ -87,8 +91,8 @@ struct StockTimeTableUnit
     bool m_b_market_order;  //!< 成行フラグ
 
     eOrderType m_type;                      //!< 注文種別
-    eOrderConditon m_condition;             //!< 条件
-    eStockInvestmentsType m_investiments;   //!< 取引所
+    eOrderCondition m_condition;            //!< 条件
+    eStockInvestmentsType m_investments;    //!< 取引所
 
     StockOrder()
     : m_code()
@@ -98,7 +102,7 @@ struct StockTimeTableUnit
     , m_b_market_order(false)
     , m_type(ORDER_NONE)
     , m_condition(CONDITION_NONE)
-    , m_investiments(INVESTMENTS_NONE)
+    , m_investments(INVESTMENTS_NONE)
     {
     }
 
@@ -106,6 +110,21 @@ struct StockTimeTableUnit
      *  @param  rcv 注文パラメータ(受信形式)
      */
     StockOrder(const RcvResponseStockOrder& rcv);
+
+    /*!
+     *  @brief  銘柄コード参照
+     */
+    const StockCode& RefCode() const { return m_code; }
+    /*!
+     *  @brief  銘柄コード取得
+     */
+    uint32_t GetCode() const { return m_code.GetCode(); }
+    /*!
+     *  @brief  株数取得 
+     */
+    int32_t GetNumber() const { return m_number; }
+    
+
 
     /*!
      *  @brief  注文の正常チェック
@@ -135,12 +154,12 @@ struct StockTimeTableUnit
             }
         }
         if (m_b_leverage) {
-            if (m_investiments != INVESTMENTS_TOKYO) {
+            if (m_investments != INVESTMENTS_TOKYO) {
                 // 信用は東証以外ありえない
                 return false;
             }
         } else {
-            if (m_investiments != INVESTMENTS_TOKYO && m_investiments != INVESTMENTS_PTS) {
+            if (m_investments != INVESTMENTS_TOKYO && m_investments != INVESTMENTS_PTS) {
                 // 取引所不正(未指定または未対応)
                 return false;
             }
@@ -152,6 +171,12 @@ struct StockTimeTableUnit
         //
         return true;
     }
+
+    /*!
+     *  @note   RcvResponseStockOrderとの比較
+     */
+    bool operator==(const RcvResponseStockOrder& right) const;
+    bool operator!=(const RcvResponseStockOrder& right) const { return !(*this == right); }
 };
 
 /*!
@@ -160,7 +185,7 @@ struct StockTimeTableUnit
  struct RcvResponseStockOrder
 {
     int32_t m_order_id;                 //!< 注文番号 管理用(SBI:グローバルっぽい/)
-    int32_t m_user_order_id;            //!< 注文番号 表示用(SIB:ユーザ固有/)
+    int32_t m_user_order_id;            //!< 注文番号 表示用(SBI:ユーザ固有/)
     eOrderType m_type;                  //!< 注文種別
     eStockInvestmentsType m_investments;//!< 取引所種別
     uint32_t m_code;                    //!< 銘柄コード
@@ -168,15 +193,72 @@ struct StockTimeTableUnit
     float64 m_value;                    //!< 注文価格
     bool m_b_leverage;                  //!< 信用フラグ
 
-    RcvResponseStockOrder()
-    : m_order_id(0)
-    , m_user_order_id(0)
-    , m_type(ORDER_NONE)
-    , m_investments(INVESTMENTS_NONE)
-    , m_code(0)
-    , m_number(0)
+    RcvResponseStockOrder();
+};
+
+/*!
+ *  @brief  株約定情報(1約定分)
+ */
+struct StockExecInfo
+{
+    int32_t m_number;           //!< 約定株数
+    float64 m_value;            //!< 約定単価
+    garnet::YYMMDD m_date;      //!< 約定年月日
+    garnet::HHMMSS m_time;      //!< 約定時間
+
+    StockExecInfo()
+    : m_number(0)
     , m_value(0.0)
-    , m_b_leverage(false)
+    , m_date()
+    , m_time()
+    {
+    }
+
+    StockExecInfo(const std::tm& datetime,
+                  int32_t number,
+                  float64 value)
+    : m_number(number)
+    , m_value(value)
+    , m_date(datetime)
+    , m_time(datetime)
+    {
+    }
+};
+
+/*!
+ *  @brief  株約定情報(1注文分)ヘッダ
+ */
+struct StockExecInfoAtOrderHeader
+{
+    int32_t m_user_order_id;            //!< 注文番号 表示用(SBI:ユーザ固有/)
+    eOrderType  m_type;                 //!< 注文種別
+    eStockInvestmentsType m_investments;//!< 約定取引所
+    uint32_t m_code;                    //!< 銘柄コード
+    bool m_b_leverage;                  //!< 信用フラグ
+    bool m_b_complete;                  //!< 約定完了フラグ
+
+    StockExecInfoAtOrderHeader();
+};
+/*!
+ *  @brief  株約定情報(1注文分)
+ */
+struct StockExecInfoAtOrder : public StockExecInfoAtOrderHeader
+{
+    std::vector<StockExecInfo>  m_exec; //!< 約定情報
+
+    /*!
+     */
+    StockExecInfoAtOrder()
+    : StockExecInfoAtOrderHeader()
+    , m_exec()
+    {
+    }
+    /*!
+     *  @brief  ヘッダだけを引き継ぐコンストラクタ
+     */
+    StockExecInfoAtOrder(const StockExecInfoAtOrderHeader& src)
+    : StockExecInfoAtOrderHeader(src)
+    , m_exec()
     {
     }
 };

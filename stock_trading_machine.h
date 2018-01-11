@@ -8,11 +8,9 @@
 #include "trade_define.h"
 #include "trading_machine.h"
 
-#include <functional>
-#include <memory>
-#include <vector>
+#include "twitter_session_fwd.h"
 
-class TwitterSessionForAuthor;
+#include <memory>
 
 namespace trading
 {
@@ -21,10 +19,11 @@ class StockTradingMachine : public TradingMachine
 {
 public:
     /*!
-     *  @param  securities  証券会社種別
+     *  @param  script_mng  外部設定(スクリプト)管理者
      *  @param  tw_session  twitterとのセッション
      */
-    StockTradingMachine(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session);
+    StockTradingMachine(const TradeAssistantSetting& script_mng,
+                        const garnet::TwitterSessionForAuthorPtr& tw_session);
     /*!
      */
     ~StockTradingMachine();
@@ -42,7 +41,10 @@ public:
      *  @param  pwd
      *  @param  pwd_sub
      */
-    void Start(int64_t tickCount, const std::wstring& uid, const std::wstring& pwd, const std::wstring& pwd_sub) override;
+    void Start(int64_t tickCount,
+               const std::wstring& uid,
+               const std::wstring& pwd,
+               const std::wstring& pwd_sub) override;
 
     /*!
      *  @brief  Update関数
@@ -50,7 +52,9 @@ public:
      *  @param[in]  script_mng  外部設定(スクリプト)管理者
      *  @param[out] o_message   メッセージ(格納先)
      */
-    void Update(int64_t tickCount, TradeAssistantSetting& script_mng, UpdateMessage& o_message) override;
+    void Update(int64_t tickCount,
+                TradeAssistantSetting& script_mng,
+                UpdateMessage& o_message) override;
 
 private:
     StockTradingMachine();
@@ -60,4 +64,3 @@ private:
 };
 
 } // namespace trading
-

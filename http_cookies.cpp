@@ -27,7 +27,7 @@ void web::http::cookies::Set(const web::http::http_headers& headers)
         // キー"set-cookie"を探す(大文字/小文字は区別しない)
         const std::wstring& hkeyT = elem.first;
         std::string hkey;
-        utility::ToLower(hkeyT, hkey);
+        garnet::utility_string::ToLower(hkeyT, hkey);
         if (0 == key.compare(hkey)) {
             // セミコロン・カンマ区切りのデータを分割してセットする
             const std::wstring& ck_str = elem.second;
@@ -88,7 +88,7 @@ void web::http::cookies_group::Set(const web::http::http_headers& headers, const
 {
     const std::wstring enc_url(std::move(web::uri::encode_uri(url_t, web::uri::components::host)));
     std::string domain;
-    utility::GetDomainFromURL(enc_url, domain);
+    garnet::utility_http::GetDomainFromURL(enc_url, domain);
     web::http::cookies& elem = m_cookies[domain];
     elem.Set(headers);
 }
@@ -108,7 +108,7 @@ void web::http::cookies_group::Get(const std::wstring& url_t, std::wstring& dst)
 {
     const std::wstring enc_url(std::move(web::uri::encode_uri(url_t, web::uri::components::host)));
     std::string domain;
-    utility::GetDomainFromURL(enc_url, domain);
+    garnet::utility_http::GetDomainFromURL(enc_url, domain);
     std::unordered_map<std::string, web::http::cookies>::const_iterator it = m_cookies.find(domain);
     if (it != m_cookies.end()) {
         it->second.Get(dst);

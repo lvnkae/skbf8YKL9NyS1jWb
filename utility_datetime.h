@@ -11,7 +11,9 @@
 
 namespace std { struct tm; }
 
-namespace utility
+namespace garnet
+{
+namespace utility_datetime
 {
 
 /*!
@@ -106,4 +108,5 @@ int64_t ToMiliSecondsFromMinute(int32_t minute);
 int64_t ToMiliSecondsFromSecond(int32_t second);
 
 
-} // namespace utility
+} // namespace utility_datetime
+} // namespace garnet

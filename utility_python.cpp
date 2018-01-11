@@ -8,6 +8,11 @@
 #include "utility_debug.h"
 #include <fstream>
 
+namespace garnet
+{
+namespace utility_python
+{
+
 /*!
  *  @brief  pythonのスクリプトを使えるようにする
  *  @param  python_home     pythonのインストールパス(full)
@@ -38,7 +43,7 @@ boost::python::api::object PreparePythonScript(PYCHAR* python_home, const std::s
  *  @brief  pythonスクリプトエラー出力
  *  @param  e   エラー
  */
-void OutputPyError(boost::python::error_already_set& e)
+void OutputPythonError(boost::python::error_already_set& e)
 {
     PyObject* extype = nullptr;
     PyObject* value = nullptr;
@@ -60,5 +65,8 @@ void OutputPyError(boost::python::error_already_set& e)
         error_str += boost::python::extract<std::string>(lines[i])();
     }
 
-    utility::DebugOutput(error_str);
+    utility_debug::DebugOutput(error_str);
 }
+
+} // namespace utility_python
+} // namespace garnet

@@ -5,6 +5,12 @@
  */
 #pragma once
 
+#include <string>
+#include <ctime>
+
+namespace garnet
+{
+
 /*!
  *  @brief  月日
  */
@@ -25,9 +31,22 @@ struct MMDD
     {
     }
 
+    MMDD(const std::tm&);
+
+    /*!
+     *  @brief  "MM/DD"形式の月日文字列から生成
+     *  @param  src 月日文字列
+     */
+    static MMDD Create(const std::string& src);
+
     bool operator==(const MMDD& right) const
     {
         return (m_month == right.m_month && m_day == right.m_day);
+    }
+
+    bool empty() const
+    {
+        return m_month == 0; // "0月"は引数なし生成時の初期化値なので空とみなす
     }
 };
 
@@ -50,6 +69,16 @@ struct YYMMDD : public MMDD
     {
     }
 
+    YYMMDD(const std::tm&);
+
+    /*!
+     *  @brief  "YYYY/MM/DD"形式の年月日文字列から生成
+     *  @param  src 年月日文字列(1900年以降)
+     *  @note   西暦部分がが3桁以下ならば2000年代の省略形とみなす
+     *  @note   ("10/01/01"は2010年1月1日)
+     */
+    static YYMMDD Create(const std::string& src);
+
     bool operator==(const YYMMDD& right) const
     {
         if (MMDD::operator==(right)) {
@@ -59,3 +88,5 @@ struct YYMMDD : public MMDD
         }
     }
 };
+
+} // namespace garnet

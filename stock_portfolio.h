@@ -5,39 +5,41 @@
  */
 #pragma once
 
-#include "hhmmss.h"
 #include "stock_code.h"
+#include "hhmmss.h"
+#include "yymmdd.h"
+
 #include <string>
 #include <vector>
+#include <unordered_map>
 
-namespace std { struct tm; }
 namespace trading
 {
 struct RcvStockValueData;
 
 /*!
- *  @brief  株監視銘柄データ
- *  @note   時系列価格データ群がメインなのでポートフォリオとは言わんかも
+ *  @brief  株式価格データ
+ *  @note   任意期間の価格と出来高を集積したもの
  */
-struct StockPortfolio
+struct StockValueData
 {
     struct stockValue
     {
-        HHMMSS m_hhmmss;    //!< 時分秒
-        float64 m_value;    //!< 価格
-        int64_t m_number;   //!< 出来高
+        garnet::HHMMSS m_hhmmss;//!< 時分秒
+        float64 m_value;        //!< 価格
+        int64_t m_volume;       //!< 出来高
 
         stockValue()
         : m_hhmmss()
         , m_value(0.f)
-        , m_number(0)
+        , m_volume(0)
         {
         }
 
         stockValue(int32_t h, int32_t m, int32_t s)
         : m_hhmmss(h, m, s)
         , m_value(0.f)
-        , m_number(0)
+        , m_volume(0)
         {
         }
     };
@@ -49,7 +51,7 @@ struct StockPortfolio
     float64 m_close;    //!< 前営業日終値
     std::vector<stockValue> m_value_data;   //!< 時系列価格データ群
 
-    StockPortfolio()
+    StockValueData()
     : m_code()
     , m_open(0.f)
     , m_high(0.f)
@@ -58,7 +60,7 @@ struct StockPortfolio
     , m_value_data()
     {
     }
-    StockPortfolio(uint32_t scode)
+    StockValueData(uint32_t scode)
     : m_code(scode)
     , m_open(0.f)
     , m_high(0.f)
@@ -78,6 +80,7 @@ struct StockPortfolio
 
 /*!
  *  @brief  価格データ(1銘柄分)受信形式
+ *  @note   ある瞬間の株データ
  */
 struct RcvStockValueData
 {
@@ -87,7 +90,7 @@ struct RcvStockValueData
     float64 m_high;     //!< 高値
     float64 m_low;      //!< 安値
     float64 m_close;    //!< 前営業日終値    
-    int64_t m_number;   //!< 出来高
+    int64_t m_volume;   //!< 出来高
 
     RcvStockValueData()
     : m_code(0)
@@ -96,10 +99,9 @@ struct RcvStockValueData
     , m_high(0.f)
     , m_low(0.f)
     , m_close(0.f)
-    , m_number(0)
+    , m_volume(0)
     {
     }
 };
 
 } // namespace trading
-

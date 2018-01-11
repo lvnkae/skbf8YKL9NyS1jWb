@@ -5,23 +5,26 @@
  */
 #pragma once
 
+#include "securities_session_fwd.h"
+#include "trade_container.h"
 #include "trade_define.h"
+
+#include "twitter_session_fwd.h"
 
 #include <memory>
 #include <vector>
-#include <unordered_map>
-#include <unordered_set>
 
+namespace garnet
+{
 class CipherAES;
 struct HHMMSS;
-class TwitterSessionForAuthor;
+} // namespace garnet
 
 namespace trading
 {
 struct RcvStockValueData;
-class SecuritiesSession;
+struct StockExecInfoAtOrder;
 class StockTradingTactics;
-struct StockPortfolio;
 class TradeAssistantSetting;
 
 /*!
@@ -35,8 +38,8 @@ public:
      *  @param  tw_session  twitterとのセッション
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    StockOrderingManager(const std::shared_ptr<SecuritiesSession>& sec_session,
-                         const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+    StockOrderingManager(const SecuritiesSessionPtr& sec_session,
+                         const garnet::TwitterSessionForAuthorPtr& tw_session,
                          TradeAssistantSetting& script_mng);
     /*!
      */
@@ -46,17 +49,26 @@ public:
      *  @brief  監視銘柄コード取得
      *  @param[out] dst 格納先
      */
-    void GetMonitoringCode(std::unordered_set<uint32_t>& dst);
+    void GetMonitoringCode(StockCodeContainer& dst);
     /*!
-     *  @brief  ポートフォリオ初期化
+     *  @brief  監視銘柄初期化
      *  @param  investments_type    取引所種別
-     *  @param  rcv_portfolio       受信したポートフォリオ<銘柄コード番号, 銘柄名(utf-16)>
+     *  @param  rcv_brand_data      受信した監視銘柄群
      *  @retval true                成功
      */
-    bool InitPortfolio(eStockInvestmentsType investments_type,
-                       const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio);
+    bool InitMonitoringBrand(eStockInvestmentsType investments_type,
+                             const StockBrandContainer& rcv_brand_data);
+
     /*!
-     *  @brief  価格データ更新
+     *  @brief  保有銘柄更新
+     *  @param  spot        現物保有株
+     *  @param  position    信用保有株
+     */
+    void UpdateHoldings(const SpotTradingsStockContainer& spot,
+                        const StockPositionContainer& position);
+
+    /*!
+     *  @brief  監視銘柄価格データ更新
      *  @param  investments_type    取引所種別
      *  @param  senddate            価格データ送信時刻
      *  @param  rcv_valuedata       受け取った価格データ
@@ -64,9 +76,14 @@ public:
     void UpdateValueData(eStockInvestmentsType investments_type,
                          const std::wstring& sendtime,
                          const std::vector<RcvStockValueData>& rcv_valuedata);
+    /*!
+     *  @brief  当日約定情報更新
+     *  @param  rcv_info    受け取った約定情報
+     */
+    void UpdateExecInfo(const std::vector<StockExecInfoAtOrder>& rcv_info);
 
     /*!
-     *  @brief  定期更新
+     *  @brief  Update関数
      *  @param  tickCount   経過時間[ミリ秒]
      *  @param  hhmmss      現在時分秒
      *  @param  investments 取引所種別
@@ -74,14 +91,15 @@ public:
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     void Update(int64_t tickCount,
-                const HHMMSS& hhmmss,
+                const garnet::HHMMSS& hhmmss,
                 eStockInvestmentsType investments,
-                const CipherAES& aes_pwd,
+                const garnet::CipherAES& aes_pwd,
                 TradeAssistantSetting& script_mng);
 
 private:
     StockOrderingManager();
     StockOrderingManager(const StockOrderingManager&);
+    StockOrderingManager(const StockOrderingManager&&);
     StockOrderingManager& operator= (const StockOrderingManager&);
 
     class PIMPL;

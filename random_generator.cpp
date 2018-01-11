@@ -7,6 +7,9 @@
 
 #include <random>
 
+namespace garnet
+{
+
 class RandomGenerator::PIMPL
 {
 private:
@@ -88,3 +91,5 @@ uint64_t RandomGenerator::Random(uint64_t a, uint64_t b)
 {
     return m_pImpl->Random(a, b);
 }
+
+} // namespace garnet

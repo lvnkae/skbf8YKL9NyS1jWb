@@ -9,7 +9,7 @@
 #include "stock_trading_starter.h"
 #include <memory>
 
-class TwitterSessionForAuthor;
+namespace garnet { class TwitterSessionForAuthor; }
 
 namespace trading
 {
@@ -25,7 +25,7 @@ public:
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     StockTradingStarterSbi(const std::shared_ptr<SecuritiesSession>& sec_session,
-                           const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+                           const std::shared_ptr<garnet::TwitterSessionForAuthor>& tw_session,
                            const TradeAssistantSetting& script_mng);
     /*!
      */
@@ -42,17 +42,19 @@ public:
      *  @param  tickCount           経過時間[ミリ秒]
      *  @param  aes_uid
      *  @param  aes_pwd
-     *  @param  monitoring_code     監視銘柄
+     *  @param  monitoring_code     監視銘柄コード
      *  @param  investments_type    取引所種別
-     *  @param  init_portfolio      ポートフォリオ初期化関数
+     *  @param  init_func           監視銘柄初期化関数
+     *  @param  update_func         保有銘柄更新関数
      *  @retval true                成功
      */
     bool Start(int64_t tickCount,
-               const CipherAES& aes_uid,
-               const CipherAES& aes_pwd,
-               const std::unordered_set<uint32_t>& monitoring_code,
+               const garnet::CipherAES& aes_uid,
+               const garnet::CipherAES& aes_pwd,
+               const StockCodeContainer& monitoring_code,
                eStockInvestmentsType investments_type,
-               const InitPortfolioFunc& init_portfolio);
+               const InitMonitoringBrandFunc& init_func,
+               const UpdateStockHoldingsFunc& update_func);
 
 private:
     class PIMPL;

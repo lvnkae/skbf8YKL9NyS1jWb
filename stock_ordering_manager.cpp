@@ -6,22 +6,41 @@
 #include "stock_ordering_manager.h"
 
 #include "securities_session.h"
+#include "stock_holdings_keeper.h"
+#include "stock_holdings.h"
 #include "stock_portfolio.h"
+#include "stock_trading_command_fwd.h"
 #include "stock_trading_command.h"
 #include "stock_trading_tactics.h"
 #include "trade_assistant_setting.h"
 #include "trade_struct.h"
+#include "trade_utility.h"
 
 #include "cipher_aes.h"
 #include "twitter_session.h"
 #include "update_message.h"
 #include "utility_datetime.h"
 #include "utility_string.h"
+#include "yymmdd.h"
 
 #include <list>
 
 namespace trading
 {
+
+namespace
+{
+
+void AddErrorMsg(const std::wstring& err, std::wstring& dst)
+{
+    if (dst.empty()) {
+        dst = err;
+    } else {
+        dst += garnet::twitter::GetNewlineString() + err;
+    }
+}
+} // namespace
+
 class StockOrderingManager::PIMPL
 {
 private:
@@ -42,6 +61,7 @@ private:
         {
         }
     };
+
     /*!
      *  @brief  緊急モード状態
      */
@@ -53,16 +73,18 @@ private:
 
         int64_t m_timer; //! 残り時間
 
-        EmergencyModeState(uint32_t code, int32_t tactics_id, const std::vector<int32_t>& group, int64_t timer)
+        EmergencyModeState(uint32_t code,
+                           int32_t tactics_id,
+                           const std::unordered_set<int32_t>& group,
+                           int64_t timer)
         : m_code(code)
         , m_tactics_id(tactics_id)
-        , m_group()
+        , m_group(group)
         , m_timer(timer)
         {
-            AddGroupID(group);
         }
 
-        void AddGroupID(const std::vector<int32_t>& group)
+        void AddGroupID(const std::unordered_set<int32_t>& group)
         {
             for (int32_t group_id: group) {
                 m_group.insert(group_id);
@@ -71,9 +93,9 @@ private:
     };
 
     //! 証券会社とのセッション
-    std::shared_ptr<SecuritiesSession> m_pSecSession;
+    SecuritiesSessionPtr m_pSecSession;
     //! twitterとのセッション
-    std::shared_ptr<TwitterSessionForAuthor> m_pTwSession;
+    garnet::TwitterSessionForAuthorPtr m_pTwSession;
 
     //! 取引戦略データ<戦略ID, 戦略データ>
     std::unordered_map<int32_t, StockTradingTactics> m_tactics;
@@ -81,50 +103,31 @@ private:
     std::vector<std::pair<uint32_t, int32_t>> m_tactics_link;
     //! 緊急モード期間[ミリ秒] ※外部設定から取得
     const int64_t m_emergency_time_ms;
-    //! 銘柄名<銘柄コード, 名前(utf-16)>
-    std::unordered_map<uint32_t, std::wstring> m_stock_name;
-    //! 監視銘柄データ<取引所種別, <銘柄コード, 1銘柄分の監視銘柄データ>>
-    std::unordered_map<eStockInvestmentsType, std::unordered_map<uint32_t, StockPortfolio>> m_portfolio;
+    //! 監視銘柄
+    StockBrandContainer m_monitoring_brand;
+    //! 監視銘柄データ<取引所種別, <銘柄コード, 1銘柄分の価格データ>>
+    std::unordered_map<eStockInvestmentsType, std::unordered_map<uint32_t, StockValueData>> m_monitoring_data;
+    //! 保有銘柄管理
+    StockHoldingsKeeper m_holdings;
 
     //! 命令リスト
-    std::list<StockTradingCommand> m_command_list;
+    std::list<StockTradingCommandPtr> m_command_list;
     //! 緊急モード状態
     std::list<EmergencyModeState> m_emergency_state;
-    //! 結果待ち注文<識別情報, 注文パラメータ> ※要素数は1か0/注文は1つずつ処理する
-    std::vector<std::pair<TacticsIdentifier, StockOrder>> m_wait_order;
-    //! 発注状況<取引所種別, <管理用注文番号, <識別情報, 注文パラメータ>>>
-    std::unordered_map<eStockInvestmentsType, std::unordered_map<int32_t, std::pair<TacticsIdentifier, StockOrder>>> m_server_order;
-    //! 注文番号対応表<表示用注文番号, 管理用注文番号>
+    //! 結果待ち注文 ※要素数は1か0/注文は1つずつ処理する
+    std::vector<StockTradingCommandPtr> m_wait_order;
+    //! 発注済み注文<取引所種別, <注文番号(管理用), 命令>>
+    std::unordered_map<eStockInvestmentsType, std::unordered_map<int32_t, StockTradingCommandPtr>> m_server_order;
+    //! 当日約定注文<銘柄コード, <約定注文識別>> ※現物買/新規信用買/新規信用売が対象、再発注制御に使う
+    typedef std::pair<TacticsIdentifier, std::vector<int32_t>> StockExecOrderIdentifier; // 約定注文識別<識別情報, 建玉固有ID群>
+    std::unordered_map<uint32_t, std::list<StockExecOrderIdentifier>> m_exec_order;
+    //! 注文番号対応表<表示用, 管理用>
     std::unordered_map<int32_t, int32_t> m_server_order_id;
 
     //! 現在の対象取引所
     eStockInvestmentsType m_investments;
     //! 経過時間[ミリ秒]
     int64_t m_tick_count;
-
-    /*!
-     *  @brief  命令と注文の属性比較
-     *  @param  left    命令
-     *  @param  right   注文+識別情報
-     */
-    bool static CompareOrderAttr(const StockTradingCommand& left, const std::pair<TacticsIdentifier, StockOrder>& right)
-    {
-        // 同種・同戦略の注文ならばtrue
-        return left.GetType() == StockTradingCommand::ORDER &&
-               left.GetOrderType() == static_cast<int>(right.second.m_type) &&
-               left.GetCode() == right.second.m_code.GetCode() &&
-               left.GetTacticsID() == right.first.m_tactics_id &&
-               left.GetOrderGroupID() == right.first.m_group_id;
-    }
-
-    void AddErrorMsg(const std::wstring& err, std::wstring& dst)
-    {
-        if (dst.empty()) {
-            dst = err;
-        } else {
-            dst += twitter::GetNewlineString() + err;
-        }
-    }
 
     /*!
      *  @brief  売買注文結果メッセージ出力
@@ -142,7 +145,7 @@ private:
                        const std::wstring& err,
                        const std::wstring& date)
     {
-        const std::wstring nl(std::move(twitter::GetNewlineString()));
+        const std::wstring nl(std::move(garnet::twitter::GetNewlineString()));
         std::wstring src((b_result) ?L"注文受付" : L"注文失敗");
         if (order.m_type == ORDER_NONE) {
             // orderが空で呼ばれることもある(発注失敗時)
@@ -158,7 +161,11 @@ private:
                 }
                 break;
             case ORDER_SELL:
-                src += L"(信用新規売)";
+                if (order.m_b_leverage) {
+                    src += L"(信用新規売)";
+                } else {
+                    src += L"(現物売)";
+                }
                 break;
             case ORDER_CORRECT:
                 src += L"(注文訂正)";
@@ -166,11 +173,17 @@ private:
             case ORDER_CANCEL:
                 src += L"(注文取消)";
                 break;
+            case ORDER_REPSELL:
+                src += L"(信用返済売)";
+                break;
+            case ORDER_REPBUY:
+                src += L"(信用返済買)";
+                break;                
             }
-            src += L" " + utility::ToSecuretIDOrder(order_id, 4);
-            src += nl + std::to_wstring(code) + L" " + m_stock_name[code];
+            src += L" " + garnet::utility_string::ToSecretIDOrder(order_id, 4);
+            src += nl + std::to_wstring(code) + L" " + m_monitoring_brand[code];
             src += nl + L"株数 " + std::to_wstring(order.m_number);
-            src += nl + L"価格 " + utility::ToWstringOrder(order.m_value, 1);
+            src += nl + L"価格 " + garnet::utility_string::ToWstringOrder(order.m_value, 1);
             if (order.m_b_market_order) {
                 src += L"(成行)";
             }
@@ -199,34 +212,46 @@ private:
             const std::wstring err_msg(L"%wait_order is empty");
             OutputMessage(b_result, StockOrder(rcv_order), rcv_order.m_order_id, err_msg, sv_date);
         } else {
-            const auto& w_order = m_wait_order.front();
-            const TacticsIdentifier& tc_idx = w_order.first;
-            const StockOrder& order = w_order.second;
+            const StockTradingCommandPtr& w_cmd_ptr = m_wait_order.front();
+            const StockOrder w_order(std::move(w_cmd_ptr->GetOrder()));
             //
             std::wstring err_msg;
             if (b_result) {
-                const float64 diff_value = order.m_value - rcv_order.m_value;
-                if (order.m_code.GetCode() == rcv_order.m_code &&
-                    order.m_type == rcv_order.m_type &&
-                    order.m_investiments == rcv_order.m_investments &&
-                    ((order.m_b_leverage && rcv_order.m_b_leverage) || (!order.m_b_leverage && !rcv_order.m_b_leverage)) &&
-                    (-0.05 < diff_value && diff_value < 0.05) && /* 誤差0.05未満は許容(浮動小数点の一致比較はあかんので) */
-                    order.m_number == rcv_order.m_number) {
-                } else {
+                if (w_order != rcv_order) {
                     // 受付と待ちが食い違ってる(error)
                     err_msg = L"isn't equal %wait_order and %rcv_order";
                 }
-                switch (order.m_type)
+                switch (w_order.m_type)
                 {
                 case ORDER_BUY:
                 case ORDER_SELL:
-                    m_server_order[investments].emplace(rcv_order.m_order_id, std::pair<TacticsIdentifier, StockOrder>(tc_idx, order));
+                case ORDER_REPSELL:
+                case ORDER_REPBUY:
+                    m_server_order[investments].emplace(rcv_order.m_order_id, w_cmd_ptr);
                     m_server_order_id.emplace(rcv_order.m_user_order_id, rcv_order.m_order_id);
+                    break;
+                case ORDER_CORRECT:
+                    {
+                        const auto itID = m_server_order_id.find(rcv_order.m_user_order_id);
+                        if (itID != m_server_order_id.end()) {
+                            auto& sv_order(m_server_order[investments]);
+                            auto itSvOrder = sv_order.find(itID->second);
+                            if (itSvOrder == sv_order.end()) {
+                                AddErrorMsg(L"not found %server_order", err_msg);
+                            } else {
+                                // 価格上書き
+                                itSvOrder->second->SetOrderValue(w_order.m_value);
+                            }
+                        } else {
+                            AddErrorMsg(L"fail to cnv %order_id from %user_order_id", err_msg);
+                        }
+                    }
                     break;
                 case ORDER_CANCEL:
                     {
-                        auto itID = m_server_order_id.find(rcv_order.m_user_order_id);
+                        const auto itID = m_server_order_id.find(rcv_order.m_user_order_id);
                         if (itID != m_server_order_id.end()) {
+                            // 削除
                             if (0 == m_server_order[investments].erase(itID->second)) {
                                 AddErrorMsg(L"fail to erase %server_order", err_msg);
                             }
@@ -240,11 +265,9 @@ private:
                 }
             }
             // 通知(m_wait_orderを参照してるので↑↓で処理が別れてる)
-            OutputMessage(b_result, order, rcv_order.m_user_order_id, err_msg, sv_date);
-            // 受け付けられたら注文待ち解除
-            if (b_result) {
-                m_wait_order.pop_back();
-            }
+            OutputMessage(b_result, w_order, rcv_order.m_user_order_id, err_msg, sv_date);
+            // 注文待ち解除(成否問わない)
+            m_wait_order.pop_back();
         }
     }
 
@@ -256,26 +279,146 @@ private:
     {
         const uint32_t code = command.GetCode();
         const int32_t tactics_id = command.GetTacticsID();
-        const std::vector<int32_t>& group = command.RefEmergencyTargetGroup();
+        const std::unordered_set<int32_t> em_group(std::move(command.GetEmergencyTargetGroup()));
         for (auto& emstat: m_emergency_state) {
             if (emstat.m_code == code && emstat.m_tactics_id == tactics_id) {
                 // すでにあれば更新
-                emstat.AddGroupID(group);
+                emstat.AddGroupID(em_group);
                 emstat.m_timer = m_emergency_time_ms;
                 return;
             }
         }
-        m_emergency_state.emplace_back(code, tactics_id, group, m_emergency_time_ms);
+        m_emergency_state.emplace_back(code, tactics_id, em_group, m_emergency_time_ms);
+    }
+
+    /*!
+     *  @brief  発注取消
+     *  @param  command     取消命令
+     *  @param  investments 取引所種別
+     */
+    void CancelOrderCommand(const StockTradingCommand& command, eStockInvestmentsType investments)
+    {
+        const std::unordered_set<int32_t> em_group(std::move(command.GetEmergencyTargetGroup()));
+        const int32_t tactics_id = command.GetTacticsID();
+        const uint32_t code = command.GetCode();
+
+        // 発注前注文取消
+        {
+            auto itRmv = std::remove_if(m_command_list.begin(),
+                                        m_command_list.end(),
+                                        [&command, &em_group](const StockTradingCommandPtr& dst)
+            {
+                const StockTradingCommand& dst_command(*dst);
+                if (!dst_command.IsOrder()) {
+                    return false; // 発注命令じゃない
+                }
+                if (command.GetCode() != dst_command.GetCode() ||
+                    command.GetTacticsID() != dst_command.GetTacticsID()) {
+                    return false; // 別銘柄または別戦略
+                }
+                if (ORDER_CANCEL == dst_command.GetOrderType()) {
+                    return false; // 取消命令は取り消さない
+                }
+                const int32_t group_id = dst_command.GetOrderGroupID();
+                for (const int32_t em_gid: em_group) {
+                    if (group_id == em_gid) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            if (m_command_list.end() != itRmv) {
+                m_command_list.erase(itRmv, m_command_list.end());
+            }
+        }
+
+        // 発注済み注文取消
+        for (const auto& sv_order: m_server_order[investments]) {
+            const StockTradingCommand& sv_cmd(*sv_order.second);
+            const int32_t sv_tactics_id = sv_cmd.GetTacticsID();
+            if (sv_tactics_id == tactics_id && sv_cmd.GetCode() == code) {
+                const int32_t sv_order_id = sv_order.first;
+                auto itCr = std::find_if(m_command_list.begin(),
+                                            m_command_list.end(),
+                                            [sv_order_id](const StockTradingCommandPtr& dst) {
+                    return dst->GetOrderType() == ORDER_CANCEL &&
+                            dst->GetOrderID() == sv_order_id;
+                });
+                if (itCr != m_command_list.end()) {
+                    continue; // もう積んである
+                }
+                const int32_t sv_group_id = sv_cmd.GetOrderGroupID();
+                auto itEm = std::find(em_group.begin(), em_group.end(), sv_group_id);
+                if (itEm != em_group.end()) {
+                    // 注文取消を先頭に積む
+                    m_command_list.emplace_front(
+                        new StockTradingCommand_ControllOrder(sv_cmd,
+                                                              ORDER_CANCEL,
+                                                              sv_order_id));
+                }
+            }
+        }
+    }
+
+    /*!
+     *  @brief  発注済み注文チェック
+     *  @param  command     出そうとしてる命令
+     *  @param  investments 取引所種別
+     *  @note   同属注文があったらtrueを返す
+     *  @note     同一 -> 弾く
+     *  @note     同属 -> commandが下位 -> 弾く
+     *  @noteq         -> commandが上位 -> 価格訂正
+     */
+    bool CheckServerOrder(const StockTradingCommand& command,
+                          eStockInvestmentsType investments)
+    {
+        const int32_t tactics_id = command.GetTacticsID();
+        const uint32_t code = command.GetCode();
+        const int32_t tac_uqid = command.GetOrderUniqueID();
+
+        bool b_command_reject = false;
+
+        // 発注済み注文チェック
+        for (const auto& sv_order: m_server_order[investments]) {
+            const StockTradingCommand& sv_cmd(*sv_order.second);
+            if (command.IsSameAttrOrder(sv_cmd)) {
+                b_command_reject = true;
+                if (sv_cmd.GetOrderUniqueID() >= tac_uqid) {
+                    // 同一、または同属上位注文発注済みなので無視
+                    continue;
+                }
+                // 同属下位命令発注済みのため価格訂正を末尾に積む
+                m_command_list.emplace_back(
+                    new StockTradingCommand_ControllOrder(command,
+                                                          ORDER_CORRECT,
+                                                          sv_order.first));
+            }
+        }
+        // 発注待機注文チェック
+        for (auto& lcommand: m_command_list) {
+            if (lcommand->IsSameBuySellOrder(command)) {
+                b_command_reject = true;
+                if (command.GetOrderUniqueID() > lcommand->GetOrderUniqueID()) {
+                    // 上書き(後勝ち)
+                    lcommand->CopyBuySellOrder(command);
+                }
+            }
+        }
+
+        return b_command_reject;
     }
 
     /*!
      *  @brief  取引命令登録
      *  @param  command     命令
+     *  @param  investments 取引所種別
      */
-    void EntryCommand(const StockTradingCommand& command)
+    void EntryCommand(const StockTradingCommandPtr& command_ptr, 
+                      eStockInvestmentsType investments)
     {
-        const uint32_t code = command.GetCode();
+        StockTradingCommand& command(*command_ptr);
         const int32_t tactics_id = command.GetTacticsID();
+        const uint32_t code = command.GetCode();
 
         // 命令種別ごとの処理
         switch (command.GetType())
@@ -283,92 +426,136 @@ private:
         case StockTradingCommand::EMERGENCY:
             // 緊急モード状態登録
             EntryEmergencyState(command);
-            // 発注前注文削除
-            {
-                auto itRmv = std::remove_if(m_command_list.begin(),
-                                            m_command_list.end(),
-                                            [&command, this](StockTradingCommand& dst) {
-                    if (dst.GetType() == StockTradingCommand::ORDER &&
-                        command.GetCode() == dst.GetCode() &&
-                        command.GetTacticsID() == dst.GetTacticsID()) {
-                        const eOrderType od_type = static_cast<eOrderType>(dst.GetOrderType());
-                        if (od_type == ORDER_BUY || od_type == ORDER_SELL || od_type == ORDER_CORRECT) {
-                            const int32_t group_id = dst.GetOrderGroupID();
-                            for (const int32_t em_gid: command.RefEmergencyTargetGroup()) {
-                                if (group_id == em_gid) {
-                                    return true;
-                                }
-                            }
-                            return false;
-                        }
-                    }
-                    return false;
-                });
-                if (m_command_list.end() != itRmv) {
-                    m_command_list.erase(itRmv, m_command_list.end());
-                }
-            }
-            // 発注済み注文取消
-            for (const auto& sv_order: m_server_order[m_investments]) {
-                const TacticsIdentifier& tc_idx(sv_order.second.first);
-                const StockOrder& order(sv_order.second.second);
-                if (tc_idx.m_tactics_id == tactics_id && order.m_code.GetCode() == code) {
-                    const int32_t order_id = sv_order.first;
-                    auto itCr = std::find_if(m_command_list.begin(), m_command_list.end(),
-                                             [order_id](const StockTradingCommand& com) {
-                        return com.GetOrderType() == ORDER_CANCEL && com.GetOrderID() == order_id;
-                    });
-                    if (itCr != m_command_list.end()) {
-                        continue; // もう積んである
-                    }
-                    const auto& em_group(command.RefEmergencyTargetGroup());
-                    auto itEm = std::find(em_group.begin(), em_group.end(), tc_idx.m_group_id);
-                    if (itEm != em_group.end()) {
-                        // 注文取消を先頭に積む
-                        StockTradingCommand cancel_command(order,
-                                                           tactics_id,
-                                                           tc_idx.m_group_id,
-                                                           tc_idx.m_unique_id,
-                                                           static_cast<int32_t>(ORDER_CANCEL),
-                                                           order_id);
-                        m_command_list.emplace_front(cancel_command);
-                    }
-                }
-            }
+            // 注文取消(中で命令積んでる)
+            CancelOrderCommand(command, investments);
             break;
 
-        case StockTradingCommand::ORDER:
-            // 発注結果待ち注文チェック
-            if (!m_wait_order.empty()) {
-                const auto& w_order = m_wait_order.front();
-                if (PIMPL::CompareOrderAttr(command, w_order)) {
-                    // 同属性注文待ちしてるので弾く(発注完了後に対処する)
-                    return;
-                }
-            }
-            // 発注済み注文チェック
-            for (const auto& sv_order: m_server_order[m_investments]) {
-                if (PIMPL::CompareOrderAttr(command, sv_order.second)) {
-                    if (sv_order.second.first.m_unique_id >= command.GetOrderUniqueID()) {
-                        // 同一、または同属上位注文発注済みなので無視
+        case StockTradingCommand::REPAYMENT_LEV_ORDER:
+        case StockTradingCommand::BUYSELL_ORDER:
+            {
+                // 発注結果待ち注文チェック
+                if (!m_wait_order.empty()) {
+                    const StockTradingCommand& w_cmd = *m_wait_order.front();
+                    if (command.IsSameAttrOrder(*m_wait_order.front())) {
+                        // 同属性注文待ちしてるので弾く(発注完了後に対処する)
                         return;
                     }
-                    // 同属下位命令発注済みのため価格訂正を末尾に積む
-                    StockTradingCommand correct_command(command, static_cast<int32_t>(ORDER_CORRECT), sv_order.first);
-                    m_command_list.emplace_back(correct_command);
-                    return;
                 }
-            }
-            // 発注待機注文チェック
-            for (auto& lcommand: m_command_list) {
-                if (lcommand.IsUpperBuySellOrder(command)) {
-                    // 上書き(後勝ち)
-                    lcommand = command;
-                    return;
+                // 発注済み注文チェック(&価格訂正)
+                if (CheckServerOrder(command, investments)) {
+                    return; // 先行注文に敗けたか訂正したので打ち切り
+                }
+
+                const eOrderType odtype = command.GetOrderType();
+                const bool b_leverage = command.IsLeverageOrder();
+
+                // 当日約定注文チェック(新規売買注文のみ)
+                if (odtype == ORDER_BUY || (odtype == ORDER_SELL && b_leverage)) {
+                    for (const auto& ex_order: m_exec_order[code]) {
+                        const TacticsIdentifier& tc_id(ex_order.first);
+                        if (command.GetTacticsID() != tc_id.m_tactics_id ||
+                            command.GetOrderGroupID() != tc_id.m_group_id) {
+                            continue;
+                        }
+                        if (!b_leverage) {
+                            // 現物は再注文不可(差金決済が面倒くさいので)
+                            return;
+                        }
+                        if (m_holdings.CheckPosition(code, ex_order.second)) {
+                            // 前回注文時の建玉が残ってる
+                            return;
+                        }
+                    }
+                }
+
+                // 保有銘柄チェック・全株指定展開・建日無指定展開
+                if (odtype == ORDER_REPBUY || odtype == ORDER_REPSELL) {
+                    // 信用返済売買
+                    const bool b_sell = (odtype == ORDER_REPSELL);
+                    const garnet::YYMMDD bg_date(std::move(command.GetRepLevBargainDate()));
+                    if (!bg_date.empty()) {
+                        // 建玉指定返済
+                        const float64 bg_value = command.GetRepLevBargainValue();
+                        const int32_t have_num
+                            = m_holdings.GetPositionNumber(code, bg_date, bg_value, b_sell);
+                        if (have_num <= 0) {
+                            return; // 保有してない
+                        }
+                        const int32_t req_num = command.GetOrderNumber();
+                        if (req_num < 0) {
+                            // 全株指定
+                            command.SetOrderNumber(have_num);
+                        } else if (have_num < req_num) {
+                            return; // 足りない
+                        }
+                    } else {
+                        // 株数指定返済
+                        bool b_add_command = false;
+                        int32_t req_num = command.GetOrderNumber();
+                        if (!m_holdings.CheckPosition(code, b_sell, req_num)) {
+                            return; // 足りない
+                        }
+                        const auto pos_list(std::move(m_holdings.GetPosition(code, b_sell)));
+                        if (pos_list.empty()) {
+                            return; // 足りてることを確認した後なのに取得できない(error)
+                        }
+                        const StockOrder order(std::move(command.GetOrder()));
+                        for (const auto& pos: pos_list) {
+                            int32_t order_num = 0;
+                            if (req_num < 0) {
+                                // 全株指定
+                                order_num = pos.m_number;
+                            } else if (req_num > pos.m_number) {
+                                // 要求数が建玉より多い
+                                order_num = pos.m_number;
+                                req_num -= pos.m_number;
+                            } else {
+                                // 要求数を賄いきった
+                                order_num = req_num;
+                                req_num = 0;
+                            }
+                            if (!b_add_command) {
+                                // 初回は今の命令を使用
+                                command.SetOrderNumber(order_num);
+                                command.SetRepLevBargain(pos.m_date, pos.m_value);
+                                b_add_command = true;
+                            } else {
+                                // 建玉を跨ぐ分は追加コマンド(先頭に積む)
+                                m_command_list.emplace_front(
+                                    new StockTradingCommand_RepLevOrder(investments,
+                                                                        code,
+                                                                        tactics_id,
+                                                                        command.GetOrderGroupID(),
+                                                                        command.GetOrderUniqueID(),
+                                                                        odtype,
+                                                                        order.m_condition,
+                                                                        order_num,
+                                                                        order.m_value,
+                                                                        pos.m_date,
+                                                                        pos.m_value));
+                            }
+                            if (req_num == 0) {
+                                break;
+                            }
+                        }
+                    }
+                } else if (odtype == ORDER_SELL && !b_leverage) {
+                    // 現物売
+                    const int32_t have_num = m_holdings.GetSpotTradingStockNumber(code);
+                    if (have_num <= 0) {
+                        return; // 保有してない
+                    }
+                    const int32_t req_num = command.GetOrderNumber();
+                    if (req_num < 0) {
+                        // 全株指定
+                        command.SetOrderNumber(have_num);
+                    } else if (have_num < req_num) {
+                        return; // 足りない
+                    }
                 }
             }
             // 末尾に積む
-            m_command_list.emplace_back(command);
+            m_command_list.emplace_back(command_ptr);
             break;
 
         default:
@@ -376,15 +563,16 @@ private:
         }
     }
 
-
     /*!
      *  @brief  戦略解釈
+     *  @param  investments 現在取引所種別
      *  @param  hhmmss      現在時分秒
      *  @param  valuedata   価格データ(1取引所分)
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    void InterpretTactics(const HHMMSS& hhmmss,
-                          const std::unordered_map<uint32_t, StockPortfolio>& valuedata,
+    void InterpretTactics(eStockInvestmentsType investments,
+                          const garnet::HHMMSS& hhmmss,
+                          const std::unordered_map<uint32_t, StockValueData>& valuedata,
                           TradeAssistantSetting& script_mng)
     {
         std::unordered_set<int32_t> blank_group;
@@ -404,20 +592,100 @@ private:
                 return emstat.m_code == code && emstat.m_tactics_id == tactics_id;
             });
             //
-            const auto& r_group = (itEmStat != m_emergency_state.end()) ?itEmStat->m_group :blank_group;
-            m_tactics[tactics_id].Interpret(hhmmss,
-                                            r_group,
-                                            itVData->second,
-                                            script_mng,
-                                            [this](const StockTradingCommand& command) { EntryCommand(command); });
+            const auto& r_group =
+                (itEmStat != m_emergency_state.end()) ?itEmStat->m_group 
+                                                      :blank_group;
+            m_tactics[tactics_id].Interpret(
+                investments, hhmmss, r_group, itVData->second, script_mng,
+                [this, investments](const StockTradingCommandPtr& command_ptr)
+            {
+                EntryCommand(command_ptr, investments);
+            });
         }
     }
 
     /*!
-     *  @brief  命令を処理する
+     *  @brief  任意の命令を処理する
+     *  @param  command     命令
+     *  @param  investments 取引所種別
      *  @param  aes_pwd
      */
-    void IssueOrder(const CipherAES& aes_pwd)
+    bool IssueOrderCore(const StockTradingCommand& command,
+                        eStockInvestmentsType investments,
+                        const garnet::CipherAES& aes_pwd)
+    {
+        const auto callback = [this, investments](bool b_result,
+                                                  const RcvResponseStockOrder& rcv_order,
+                                                  const std::wstring& sv_date) {
+            StockOrderCallback(b_result, rcv_order, sv_date, investments);
+        };
+
+        if (!command.IsOrder()) {
+            // 発注命令じゃない(error)
+            return false;
+        }
+
+        const StockOrder order(std::move(command.GetOrder()));
+        const StockCode& s_code(order.RefCode());
+
+        std::wstring pwd;
+        if (!aes_pwd.Decrypt(pwd)) {
+            // 復号失敗
+            return false;
+        }
+
+        switch (order.m_type)
+        {
+        case ORDER_BUY:
+            m_pSecSession->BuySellOrder(order, pwd, callback);
+            break;
+        case ORDER_SELL:
+            if (!m_holdings.CheckSpotTradingStock(s_code, order.GetNumber())) {
+                // 株不足(ラグで起こり得る)
+                return false;
+            }
+            m_pSecSession->BuySellOrder(order, pwd, callback);
+            break;
+        case ORDER_CORRECT:
+            m_pSecSession->CorrectOrder(command.GetOrderID(), order, pwd, callback);
+            break;
+        case ORDER_CANCEL:
+            m_pSecSession->CancelOrder(command.GetOrderID(), pwd, callback);
+            break;
+        case ORDER_REPSELL:
+        case ORDER_REPBUY:
+            {
+                const garnet::YYMMDD bg_date(std::move(command.GetRepLevBargainDate()));
+                const float64 bg_value = command.GetRepLevBargainValue();
+                if (!m_holdings.CheckPosition(s_code,
+                                              bg_date,
+                                              bg_value,
+                                              order.m_type == ORDER_REPSELL,
+                                              order.GetNumber())) {
+                    // 株不足(ラグで起こり得る)
+                    return false;
+                }
+                m_pSecSession->RepaymentLeverageOrder(bg_date,
+                                                      bg_value,
+                                                      order,
+                                                      pwd,
+                                                      callback);
+            }
+            break;
+        default:
+            // 不正な命令が積まれてる(error)
+            return false;
+        }
+        //
+        return true;
+    }
+
+    /*!
+     *  @brief  命令リスト先頭の命令を処理する
+     *  @param  investments 取引所種別
+     *  @param  aes_pwd
+     */
+    void IssueOrder(eStockInvestmentsType investments, const garnet::CipherAES& aes_pwd)
     {
         if (m_command_list.empty()) {
             return; // 空
@@ -425,47 +693,18 @@ private:
         if (!m_wait_order.empty()) {
             return; // 待ちがある
         }
-        const StockTradingCommand& command(m_command_list.front());
-        if (command.GetType() != StockTradingCommand::ORDER) {
-            // 不正な命令が積まれてたら消してret(error)
-            m_command_list.pop_front();
-            return;
-        }
+        const StockTradingCommandPtr& command_ptr(m_command_list.front());
+        const StockTradingCommand& command(*command_ptr);
 
-        // 結果待ち注文に積む
-        StockOrder order;
-        command.GetOrder(order);
-        const eStockInvestmentsType investments = m_investments;
-        order.m_investiments = investments;
-        m_wait_order.emplace_back(std::pair<TacticsIdentifier, StockOrder>(command, order));
-        //
-        std::wstring pwd;
-        aes_pwd.Decrypt(pwd);
-        const auto callabck = [this, investments](bool b_result,
-                                                  const RcvResponseStockOrder& rcv_order,
-                                                  const std::wstring& sv_date) {
-            StockOrderCallback(b_result, rcv_order, sv_date, investments);
-        };
-        switch (order.m_type)
-        {
-        case ORDER_BUY:
-        case ORDER_SELL:
-            m_pSecSession->FreshOrder(order, pwd, callabck);
-            break;
-        case ORDER_CORRECT:
-            m_pSecSession->CorrectOrder(command.GetOrderID(), order, pwd, callabck);
-            break;
-        case ORDER_CANCEL:
-            m_pSecSession->CancelOrder(command.GetOrderID(), pwd, callabck);
-            break;
-        default:
-            // 不正な命令が積まれてたら、結果待ちから消す(error)
-            m_wait_order.pop_back();
-            break;
-        }
-        //
+        m_wait_order.push_back(command_ptr);
         m_command_list.pop_front();
+
+        if (!IssueOrderCore(command, investments, aes_pwd)) {
+            // 発注できなかったら結果待ち削除(ラグで起こり得る)
+            m_wait_order.pop_back();
+        }
     }
+
 
 public:
     /*!
@@ -473,16 +712,18 @@ public:
      *  @param  tw_session  twitterとのセッション
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    PIMPL(const std::shared_ptr<SecuritiesSession>& sec_session,
-          const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+    PIMPL(const SecuritiesSessionPtr& sec_session,
+          const garnet::TwitterSessionForAuthorPtr& tw_session,
           TradeAssistantSetting& script_mng)
     : m_pSecSession(sec_session)
     , m_pTwSession(tw_session)
     , m_tactics()
     , m_tactics_link()
-    , m_emergency_time_ms(utility::ToMiliSecondsFromSecond(script_mng.GetEmergencyCoolSecond()))
-    , m_stock_name()
-    , m_portfolio()
+    , m_emergency_time_ms(
+        garnet::utility_datetime::ToMiliSecondsFromSecond(script_mng.GetEmergencyCoolSecond()))
+    , m_monitoring_brand()
+    , m_monitoring_data()
+    , m_holdings()
     , m_command_list()
     , m_emergency_state()
     , m_wait_order()
@@ -493,16 +734,15 @@ public:
     {
         UpdateMessage msg;
         if (!script_mng.BuildStockTactics(msg, m_tactics, m_tactics_link)) {
-            // 失敗
+            // 失敗(error)
         }
     }
-
 
     /*!
      *  @brief  監視銘柄コード取得
      *  @param[out] dst 格納先
      */
-    void GetMonitoringCode(std::unordered_set<uint32_t>& dst)
+    void GetMonitoringCode(StockCodeContainer& dst)
     {
         for (const auto& link: m_tactics_link) {
             dst.insert(link.first);
@@ -510,31 +750,31 @@ public:
     }
 
     /*!
-     *  @brief  ポートフォリオ初期化
+     *  @brief  監視銘柄初期化
      *  @param  investments_type    取引所種別
-     *  @param  rcv_portfolio       受信したポートフォリオ(簡易)
+     *  @param  rcv_brand_data      受信した監視銘柄群
      *  @retval true                成功
      */
-    bool InitPortfolio(eStockInvestmentsType investments_type,
-                       const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)
+    bool InitMonitoringBrand(eStockInvestmentsType investments_type,
+                             const StockBrandContainer& rcv_brand_data)
     {
-        // 受信したポートフォリオが監視銘柄と一致してるかチェック
-        std::unordered_map<uint32_t, StockPortfolio> portfolio;
-        std::unordered_set<uint32_t> monitoring_code;
+        // 受信した監視銘柄群が戦略データと一致してるかチェック
+        std::unordered_map<uint32_t, StockValueData> monitoring_data;
+        StockCodeContainer monitoring_code;
         GetMonitoringCode(monitoring_code);
-        portfolio.reserve(monitoring_code.size());
+        monitoring_data.reserve(monitoring_code.size());
         for (uint32_t code: monitoring_code) {
-            if (rcv_portfolio.end() != rcv_portfolio.find(code)) {
-                portfolio.emplace(code, StockPortfolio(code));
+            if (rcv_brand_data.end() != rcv_brand_data.find(code)) {
+                monitoring_data.emplace(code, StockValueData(code));
             } else {
                 return false;
             }
         }
         // 空だったら新規作成
-        auto portfolio_it = m_portfolio.find(investments_type);
-        if (portfolio_it == m_portfolio.end()) {
-            m_portfolio.emplace(investments_type, portfolio);
-            m_stock_name = rcv_portfolio;
+        auto itMtd = m_monitoring_data.find(investments_type);
+        if (itMtd == m_monitoring_data.end()) {
+            m_monitoring_data.emplace(investments_type, monitoring_data);
+            m_monitoring_brand = rcv_brand_data;
         }
         return true;
     }
@@ -549,15 +789,15 @@ public:
                          const std::wstring& sendtime,
                          const std::vector<RcvStockValueData>& rcv_valuedata)
     {
-        auto itPf = m_portfolio.find(investments_type);
-        if (itPf != m_portfolio.end()) {
+        auto itMtd = m_monitoring_data.find(investments_type);
+        if (itMtd != m_monitoring_data.end()) {
             std::tm tm_send; // 価格データ送信時刻(サーバタイム)
-            auto pt(utility::ToLocalTimeFromRFC1123(sendtime));
-            utility::ToTimeFromBoostPosixTime(pt, tm_send);
-            auto& portfolio(itPf->second);
+            auto pt(garnet::utility_datetime::ToLocalTimeFromRFC1123(sendtime));
+            garnet::utility_datetime::ToTimeFromBoostPosixTime(pt, tm_send);
+            auto& valuedata(itMtd->second);
             for (const auto& vunit: rcv_valuedata) {
-                auto it = portfolio.find(vunit.m_code);
-                if (it != portfolio.end()) {
+                auto it = valuedata.find(vunit.m_code);
+                if (it != valuedata.end()) {
                     it->second.UpdateValueData(vunit, tm_send);
                 } else {
                     // 見つからなかったらどうする？(error)
@@ -569,7 +809,106 @@ public:
     }
 
     /*!
-     *  @brief  定期更新
+     *  @brief  発注済み注文検索
+     *  @param  src             発注済み注文map(1取引所分)
+     *  @param  user_order_id   探す注文番号(表示用)
+     *  @return iterator
+     */
+    std::unordered_map<int32_t, StockTradingCommandPtr>::iterator
+        SearchServerOrder(std::unordered_map<int32_t, StockTradingCommandPtr>& src,
+                          int32_t user_order_id)
+    {
+        const auto itID = m_server_order_id.find(user_order_id);
+        if (itID == m_server_order_id.end()) {
+            return src.end(); // ID変換失敗(error)
+        }
+        int32_t order_id = itID->second;
+        return src.find(order_id);
+    }
+
+    /*!
+     *  @brief  当日約定情報更新
+     *  @param  rcv_info    受け取った約定情報
+     */
+    void UpdateExecInfo(const std::vector<StockExecInfoAtOrder>& rcv_info)
+    {
+        // 約定差分(前回更新後に約定した情報)を得る
+        std::vector<StockExecInfoAtOrder> diff_info;
+        m_holdings.GetExecInfoDiff(rcv_info, diff_info);
+        if (diff_info.empty()) {
+            return ; // 変化なし
+        }
+        // 約定差分と対応する「発注済み信用返済売買注文」を取り出す
+        ServerRepLevOrder rep_order;
+        for (const auto& ex_info: diff_info) {
+            if (ex_info.m_type != ORDER_REPBUY && ex_info.m_type != ORDER_REPSELL) {
+                continue; // 対象は信用返済売買のみ
+            }
+            auto& sv_order(m_server_order[INVESTMENTS_TOKYO]);
+            const int32_t user_order_id = ex_info.m_user_order_id;
+            const auto itOrder = SearchServerOrder(sv_order, user_order_id);
+            if (itOrder == sv_order.end()) {
+                // 発注済み注文が無い(error) ... (a)
+                // ツール外でなんらか発注してた場合はあり得る
+                continue;
+            }
+            rep_order.emplace(user_order_id, itOrder->second);
+        }
+        // 差分反映
+        m_holdings.UpdateExecInfo(rcv_info, diff_info, rep_order);
+        // 約定済み注文更新
+        {
+            for (auto it = m_exec_order.begin(); it != m_exec_order.end(); it++) {
+                const StockCode s_code(it->first);
+                auto itRmv = std::remove_if(it->second.begin(),
+                                            it->second.end(),
+                                            [this, &s_code](const StockExecOrderIdentifier& ex) {
+                    return !m_holdings.CheckPosition(s_code, ex.second);
+                });
+                if (it->second.end() != itRmv) {
+                    it->second.erase(itRmv, it->second.end());
+                }
+            }
+        }
+        // 全部約定した発注済み注文を削除する
+        for (const auto& ex_info: diff_info) {
+            if (!ex_info.m_b_complete) {
+                continue;
+            }
+            auto& sv_order(m_server_order[ex_info.m_investments]);
+            const int32_t user_order_id = ex_info.m_user_order_id;
+            const auto itOrder = SearchServerOrder(sv_order, user_order_id);
+            if (itOrder == sv_order.end()) {
+                continue; // (a)
+            }
+            // 現物買/新規信用売買ならば「約定済み注文」へ登録
+            const uint32_t code = ex_info.m_code;
+            const eOrderType type = ex_info.m_type;
+            if (ex_info.m_b_leverage && (type == ORDER_BUY || type == ORDER_SELL)) {
+                std::vector<int32_t> pos_id;
+                m_holdings.GetPositionID(user_order_id, pos_id);
+                m_exec_order[code].emplace_back(*itOrder->second, pos_id);
+            } else if (type == ORDER_BUY) {
+                m_exec_order[code].emplace_back(*itOrder->second, std::vector<int32_t>());
+            }
+            // 削除
+            sv_order.erase(itOrder);
+        }
+        // 約定通知 >ToDo<
+    }
+    /*!
+     *  @brief  保有銘柄更新
+     *  @param  spot        現物保有株
+     *  @param  position    信用保有株
+     */
+    void UpdateHoldings(const SpotTradingsStockContainer& spot,
+                        const StockPositionContainer& position)
+    {
+        m_holdings.UpdateHoldings(spot, position);
+    }
+
+    /*!
+     *  @brief  Update関数
      *  @param  tickCount   経過時間[ミリ秒]
      *  @param  hhmmss      現在時分秒
      *  @param  investments 取引所種別
@@ -578,9 +917,9 @@ public:
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     void Update(int64_t tickCount,
-                const HHMMSS& hhmmss,
+                const garnet::HHMMSS& hhmmss,
                 eStockInvestmentsType investments,
-                const CipherAES& aes_pwd,
+                const garnet::CipherAES& aes_pwd,
                 TradeAssistantSetting& script_mng)
     {
         // 取引所種別が変わったら今ある命令リストetcを破棄
@@ -604,9 +943,9 @@ public:
             }
         }
         // 戦略解釈
-        InterpretTactics(hhmmss, m_portfolio[investments], script_mng);
+        InterpretTactics(investments, hhmmss, m_monitoring_data[investments], script_mng);
         // 命令処理
-        IssueOrder(aes_pwd);
+        IssueOrder(investments, aes_pwd);
         //
         m_tick_count = tickCount;
         m_investments = investments;
@@ -619,8 +958,8 @@ public:
  *  @param  tw_session  twitterとのセッション
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
-StockOrderingManager::StockOrderingManager(const std::shared_ptr<SecuritiesSession>& sec_session,
-                                           const std::shared_ptr<TwitterSessionForAuthor>& tw_session,
+StockOrderingManager::StockOrderingManager(const SecuritiesSessionPtr& sec_session,
+                                           const garnet::TwitterSessionForAuthorPtr& tw_session,
                                            TradeAssistantSetting& script_mng)
 : m_pImpl(new PIMPL(sec_session, tw_session, script_mng))
 {
@@ -635,20 +974,30 @@ StockOrderingManager::~StockOrderingManager()
  *  @brief  監視銘柄コード取得
  *  @param[out] dst 格納先
  */
-void StockOrderingManager::GetMonitoringCode(std::unordered_set<uint32_t>& dst)
+void StockOrderingManager::GetMonitoringCode(StockCodeContainer& dst)
 {
     m_pImpl->GetMonitoringCode(dst);
 }
+/*!
+ *  @brief  監視銘柄初期化
+ *  @param  investments_type    取引所種別
+ *  @param  rcv_brand_data      受信した監視銘柄群
+ */
+bool StockOrderingManager::InitMonitoringBrand(eStockInvestmentsType investments_type,
+                                               const StockBrandContainer& rcv_brand_data)
+{
+    return m_pImpl->InitMonitoringBrand(investments_type, rcv_brand_data);
+}
 
 /*!
- *  @brief  ポートフォリオ初期化
- *  @param  investments_type    取引所種別
- *  @param  rcv_portfolio       受信したポートフォリオ<銘柄コード番号, 銘柄名(utf-16)>
+ *  @brief  保有銘柄更新
+ *  @param  spot        現物保有株
+ *  @param  position    信用保有株
  */
-bool StockOrderingManager::InitPortfolio(eStockInvestmentsType investments_type,
-                                         const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)
+void StockOrderingManager::UpdateHoldings(const SpotTradingsStockContainer& spot,
+                                            const StockPositionContainer& position)
 {
-    return m_pImpl->InitPortfolio(investments_type, rcv_portfolio);
+    m_pImpl->UpdateHoldings(spot, position);
 }
 
 /*!
@@ -665,7 +1014,16 @@ void StockOrderingManager::UpdateValueData(eStockInvestmentsType investments_typ
 }
 
 /*!
- *  @brief  定期更新
+ *  @brief  当日約定情報更新
+ *  @param  rcv_info    受け取った約定情報
+ */
+void StockOrderingManager::UpdateExecInfo(const std::vector<StockExecInfoAtOrder>& rcv_info)
+{
+    m_pImpl->UpdateExecInfo(rcv_info);
+}
+
+/*!
+ *  @brief  Update関数
  *  @param  tickCount   経過時間[ミリ秒]
  *  @param  hhmmss      現在時分秒
  *  @param  investments 取引所種別
@@ -674,9 +1032,9 @@ void StockOrderingManager::UpdateValueData(eStockInvestmentsType investments_typ
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
 void StockOrderingManager::Update(int64_t tickCount,
-                                  const HHMMSS& hhmmss,
+                                  const garnet::HHMMSS& hhmmss,
                                   eStockInvestmentsType investments,
-                                  const CipherAES& aes_pwd,
+                                  const garnet::CipherAES& aes_pwd,
                                   TradeAssistantSetting& script_mng)
 {
     m_pImpl->Update(tickCount, hhmmss, investments, aes_pwd, script_mng);

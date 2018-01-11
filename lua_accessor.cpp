@@ -51,6 +51,17 @@ bool GetTableParamCore(lua_State* state_ptr, const std::string& param_name, floa
     o_param = static_cast<float32>(lua_tonumber(state_ptr, LuaAccessorLocal::STACKTOP));
     return true;
 }
+bool GetTableParamCore(lua_State* state_ptr, const std::string& param_name, float64& o_param)
+{
+    if (0 == lua_getfield(state_ptr, LuaAccessorLocal::STACKTOP, param_name.c_str())) {
+        return false;
+    }
+    if (!lua_isnumber(state_ptr, LuaAccessorLocal::STACKTOP)) {
+        return false;
+    }
+    o_param = static_cast<float64>(lua_tonumber(state_ptr, LuaAccessorLocal::STACKTOP));
+    return true;
+}
 bool GetTableParamCore(lua_State* state_ptr, const std::string& param_name, bool& o_param)
 {
     if (0 == lua_getfield(state_ptr, LuaAccessorLocal::STACKTOP, param_name.c_str())) {
@@ -305,6 +316,7 @@ bool LuaAccessor::GetGlobalParam(const std::string& param_name, int32_t& o_param
 bool LuaAccessor::GetTableParam(const std::string& param_name, std::string& o_param) { return LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
 bool LuaAccessor::GetTableParam(const std::string& param_name, int32_t& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
 bool LuaAccessor::GetTableParam(const std::string& param_name, float32& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
+bool LuaAccessor::GetTableParam(const std::string& param_name, float64& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
 bool LuaAccessor::GetTableParam(const std::string& param_name, bool& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
 /*!
  *  @brief  配列パラメータ取得

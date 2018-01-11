@@ -74,6 +74,7 @@ public:
     bool GetTableParam(const std::string& param_name, std::string& o_param);
     bool GetTableParam(const std::string& param_name, int32_t& o_param);
     bool GetTableParam(const std::string& param_name, float32& o_param);
+    bool GetTableParam(const std::string& param_name, float64& o_param);
     bool GetTableParam(const std::string& param_name, bool& o_param);
     /*!
      *  @brief  配列パラメータ取得

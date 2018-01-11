@@ -58,6 +58,8 @@ enum eOrderType
     ORDER_SELL,     //!< ”„‚è
     ORDER_CORRECT,  //!< ’ù³
     ORDER_CANCEL,   //!< ŽæÁ
+    ORDER_REPSELL,  //!< •Ô”„
+    ORDER_REPBUY,   //!< •Ô”ƒ
 
     NUM_ORDER,
 };
@@ -74,7 +76,7 @@ enum eReverseOrder
 /*!
  *  @brief  ’•¶ðŒ
  */
-enum eOrderConditon
+enum eOrderCondition
 {
     CONDITION_NONE = 0,
 

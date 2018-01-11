@@ -13,7 +13,10 @@
 #include "boost/date_time/local_time/local_time.hpp"
 
 #include "hhmmss.h"
+#include "yymmdd.h"
 
+namespace
+{
 const int32_t DAYS_OF_1WEEK = 7;                // 一週間=7日
 const int32_t HOURS_OF_1DAY = 24;               // 1日=24時間
 const int32_t MINUTES_OF_1HOUR = 60;            // 1時間=60分
@@ -24,8 +27,11 @@ const int64_t MILISECONDS_OF_1SECOND = 1000;    // 1秒=100ミリ秒
 const int32_t SECONDS_OF_1HOUR = MINUTES_OF_1HOUR*SECONDS_OF_1MINUTE;
 // 1日の秒数
 const int32_t SECONDS_OF_1DAY = HOURS_OF_1DAY*MINUTES_OF_1HOUR*SECONDS_OF_1MINUTE;
+}
 
-namespace utility
+namespace garnet
+{
+namespace utility_datetime
 {
 
 /*!
@@ -177,7 +183,7 @@ int64_t GetAfterDayLimitMS(const boost::posix_time::ptime& pt, int32_t after_day
         return 0;
     }
     std::tm src_tm;
-    utility::ToTimeFromBoostPosixTime(pt, src_tm);
+    ToTimeFromBoostPosixTime(pt, src_tm);
     std::time_t src_tt = std::mktime(&src_tm);
     std::time_t after_tt = src_tt + SECONDS_OF_1DAY*after_day;
 #if defined(_WINDOWS)
@@ -202,7 +208,7 @@ int64_t GetAfterDayLimitMS(const boost::posix_time::ptime& pt, int32_t after_day
  */
 int64_t ToMiliSecondsFromMinute(int32_t minute)
 {
-    return static_cast<int64_t>(minute)*utility::ToMiliSecondsFromSecond(SECONDS_OF_1MINUTE);
+    return static_cast<int64_t>(minute)*ToMiliSecondsFromSecond(SECONDS_OF_1MINUTE);
 }
 /*!
  *  @brief  秒をミリ秒で得る
@@ -213,10 +219,18 @@ int64_t ToMiliSecondsFromSecond(int32_t second)
     return static_cast<int64_t>(second)*MILISECONDS_OF_1SECOND;
 }
 
+} // namespace utility_datetime
 
-} // namespace utility
 
-
+/*!
+ *  @param  tm  年月日時分秒パラメータ
+ */
+HHMMSS::HHMMSS(const std::tm& tm)
+: m_hour(tm.tm_hour)
+, m_minute(tm.tm_min)
+, m_second(tm.tm_sec)
+{
+}
 /*!
  *  @brief  00:00:00からの経過秒数を得る
  */
@@ -224,3 +238,50 @@ int32_t HHMMSS::GetPastSecond() const
 {
     return SECONDS_OF_1HOUR*m_hour + SECONDS_OF_1MINUTE*m_minute + m_second;
 }
+
+/*!
+ *  @param  tm  年月日時分秒パラメータ
+ */
+MMDD::MMDD(const std::tm& tm)
+: m_month(tm.tm_mon+1) // 1始まり
+, m_day(tm.tm_mday)
+{
+}
+/*!
+ *  @param  src "MM/DD"形式の月日文字列
+ */
+MMDD MMDD::Create(const std::string& src)
+{
+    std::tm mmdd_tm;
+    if (utility_datetime::ToTimeFromString(src, "%m/%d", mmdd_tm)) {
+        return MMDD(mmdd_tm);
+    } else {
+        return MMDD();
+    }
+}
+
+/*!
+ *  @param  tm  年月日時分秒パラメータ
+ */
+YYMMDD::YYMMDD(const std::tm& tm)
+: MMDD(tm)
+, m_year(tm.tm_year + 1900) // 西暦
+{
+}
+/*!
+ *  @param  src "YYYY/MM/DD"形式の年月日文字列
+ */
+YYMMDD YYMMDD::Create(const std::string& src)
+{
+    std::tm yymmdd_tm;
+    if (utility_datetime::ToTimeFromString(src, "%Y/%m/%d", yymmdd_tm)) {
+        if (src.find('/') < 4) {
+            yymmdd_tm.tm_year += 100;
+        }
+        return YYMMDD(yymmdd_tm);
+    } else {
+        return YYMMDD();
+    }
+}
+
+} // namespace garnet

@@ -41,33 +41,38 @@ private:
     std::mutex m_mtx;       //!< 排他制御子
     eSequence m_sequence;   //!< シーケンス
 
-    eSecuritiesType m_securities;                               //!< 証券会社種別
-    std::shared_ptr<SecuritiesSession> m_pSecSession;           //!< 証券会社とのセッション
-    std::shared_ptr<TwitterSessionForAuthor> m_pTwSession;      //!< twitterとのセッション(メッセージ通知用)
-    std::unique_ptr<StockTradingStarter> m_pStarter;            //!< 株取引スターター
-    std::unique_ptr<StockOrderingManager> m_pOrderingManager;   //!< 発注管理者
-    std::unique_ptr<HolidayInvestigator> m_pHolidayInvestigator;//!< 休日調査官
+    eSecuritiesType m_securities;                                   //!< 証券会社種別
+    std::shared_ptr<SecuritiesSession> m_pSecSession;               //!< 証券会社とのセッション
+    garnet::TwitterSessionForAuthorPtr m_pTwSession;                //!< twitterとのセッション(メッセージ通知用)
+    std::unique_ptr<StockTradingStarter> m_pStarter;                //!< 株取引スターター
+    std::unique_ptr<StockOrderingManager> m_pOrderingManager;       //!< 発注管理者
+    std::unique_ptr<HolidayInvestigator> m_pHolidayInvestigator;    //!< 休日調査官
 
     //!< JPX固有休業日(土日祝でなくとも休みになる日)
-    std::vector<MMDD> m_jpx_holiday;
+    std::vector<garnet::MMDD> m_jpx_holiday;
     //!< 株取引タイムテーブル
     std::vector<StockTimeTableUnit> m_timetable;
 
-    RandomGenerator m_rand_gen; //!< 乱数生成器
-    CipherAES m_aes_uid;        //!< 暗号uid
-    CipherAES m_aes_pwd;        //!< 暗号pwd
-    CipherAES m_aes_pwd_sub;    //!< 暗号pwd_sub
+    garnet::RandomGenerator m_rand_gen; //!< 乱数生成器
+    garnet::CipherAES m_aes_uid;        //!< 暗号uid
+    garnet::CipherAES m_aes_pwd;        //!< 暗号pwd
+    garnet::CipherAES m_aes_pwd_sub;    //!< 暗号pwd_sub
 
     int64_t m_tickcount;                        //!< 前回操作時のtickCount
     std::tm m_last_sv_time;                     //!< 最後にサーバ(証券会社および休日判定)から得た時刻
     int64_t m_last_sv_time_tick;                //!< ↑を得たtickCount
-    int64_t m_wait_count;                       //!< ウェイトカウント(ms単位)
+    int64_t m_wait_count_ms;                    //!< ウェイトカウント[ミリ秒]
     eSequence m_after_wait_seq;                 //!< ウェイト開けの遷移先シーケンス
-    StockTimeTableUnit::eMode m_prev_tt_mode;   //!< 前回Update時のTTモード
-    int64_t m_last_monitor_tick;                //!< 監視銘柄情報を最後に要求したtickCount
+    StockTimeTableUnit::eMode m_prev_tt_mode;   //!< 前回Update時のTimeTableモード
+    int64_t m_last_monitoring_tick;             //!< 最後に監視銘柄情報(価格データ)を要求したtickCount
+    int64_t m_last_req_exec_info_tick;          //!< 最後に当日約定情報を要求したtickCount
+
+    const int64_t m_monitoring_interval_ms;     //!< 監視銘柄情報(価格データ)更新間隔[ミリ秒]
+    const int64_t m_exec_info_interval_ms;      //!< 当日約定情報更新間隔[ミリ秒]
 
 private:
     PIMPL();
+    PIMPL(const PIMPL&&);
     PIMPL(const PIMPL&);
     PIMPL& operator= (const PIMPL&);
 
@@ -119,15 +124,16 @@ private:
 
         m_pHolidayInvestigator.reset(new HolidayInvestigator());
         m_pHolidayInvestigator->Investigate([this](bool b_result, bool is_holiday, const std::wstring& datetime) {
-            // http関連スレッドから呼ばれるのでlockが必要
+            using namespace garnet;
+            // http関連スレッドから呼ばれるのでlock
             std::lock_guard<std::mutex> lock(m_mtx);
             //
             const uint32_t ACCEPTABLE_DIFF_SECONDS = 10*60; // 許容される時間ズレ(10分)
             /*std::string dummy("Fri, 03 Jan 2014 21:39:11 GMT");*/
-            auto pt(std::move(utility::ToLocalTimeFromRFC1123(datetime)));
-            utility::ToTimeFromBoostPosixTime(pt, m_last_sv_time);
-            m_last_sv_time_tick = utility::GetTickCountGeneral();
-            if (ACCEPTABLE_DIFF_SECONDS >= utility::GetDiffSecondsFromLocalMachineTime(m_last_sv_time)) {
+            auto pt(std::move(utility_datetime::ToLocalTimeFromRFC1123(datetime)));
+            utility_datetime::ToTimeFromBoostPosixTime(pt, m_last_sv_time);
+            m_last_sv_time_tick = utility_datetime::GetTickCountGeneral();
+            if (ACCEPTABLE_DIFF_SECONDS >= utility_datetime::GetDiffSecondsFromLocalMachineTime(m_last_sv_time)) {
                 
                 //m_last_sv_time.tm_hour = 9;//
                 //m_last_sv_time.tm_min = 19;//
@@ -137,26 +143,26 @@ private:
 
                 // 土日なら週明けに再調査(成否に関係なく)
                 m_after_wait_seq = SEQ_CLOSED_CHECK;
-                if (utility::SATURDAY == m_last_sv_time.tm_wday) {
+                if (utility_datetime::SATURDAY == m_last_sv_time.tm_wday) {
                     const int32_t AFTER_DAY = 2;
-                    m_wait_count = utility::GetAfterDayLimitMS(pt, AFTER_DAY);
-                } else if (utility::SUNDAY == m_last_sv_time.tm_wday) {
+                    m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(pt, AFTER_DAY);
+                } else if (utility_datetime::SUNDAY == m_last_sv_time.tm_wday) {
                     const int32_t AFTER_DAY = 1;
-                    m_wait_count = utility::GetAfterDayLimitMS(pt, AFTER_DAY);
+                    m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(pt, AFTER_DAY);
                 } else {
                     if (b_result) {
                         if (is_holiday || IsJPXHoliday(m_last_sv_time)) {
                             // 祝日または固有休業日 → 翌日再調査
                             const int32_t AFTER_DAY = 1;
-                            m_wait_count = utility::GetAfterDayLimitMS(pt, AFTER_DAY);
+                            m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(pt, AFTER_DAY);
                         } else {
                             // 営業日 → トレード主処理へ
                             m_sequence = SEQ_TRADING;
                         }
                     } else {
-                        // 調査失敗 → 指定時間後に再チャレンジ
+                        // 調査失敗 → 10分後に再チャレンジ
                         const int32_t WAIT_MINUTES = 10;
-                        m_wait_count = utility::ToMiliSecondsFromMinute(WAIT_MINUTES);
+                        m_wait_count_ms = utility_datetime::ToMiliSecondsFromMinute(WAIT_MINUTES);
                     }
                 }
             } else {
@@ -191,22 +197,41 @@ private:
         }
         bool b_valid = true;
         if (prev_mode != now_tt.m_mode) {
-            auto initPortfolio = [this](eStockInvestmentsType investments_type,
-                                        const std::unordered_map<uint32_t, std::wstring>& rcv_portfolio)->bool {
-                std::lock_guard<std::mutex> lock(m_mtx); // http関連スレッドから呼ばれるのでlockが必要
-                return m_pOrderingManager->InitPortfolio(investments_type, rcv_portfolio);
+            auto startFunc = [this](StockTimeTableUnit::eMode mode, int64_t tickCount)->bool
+            {
+                auto initFunc = [this](eStockInvestmentsType investments_type,
+                                       const StockBrandContainer& rcv_brand)->bool
+                {
+                    // http関連スレッドから呼ばれるのでlock
+                    std::lock_guard<std::mutex> lock(m_mtx);
+                    //
+                    return m_pOrderingManager->InitMonitoringBrand(investments_type, rcv_brand);
+                };
+                auto updateFunc = [this](const SpotTradingsStockContainer& spot,
+                                         const StockPositionContainer& position)
+                {
+                    // http関連スレッドから呼ばれるのでlock
+                    std::lock_guard<std::mutex> lock(m_mtx);
+                    //
+                    return m_pOrderingManager->UpdateHoldings(spot, position);
+                };
+                //
+                const eStockInvestmentsType start_inv
+                    = StockTimeTableUnit::ToInvestmentsTypeFromMode(mode);
+                StockCodeContainer monitoring_code;
+                m_pOrderingManager->GetMonitoringCode(monitoring_code);
+                return m_pStarter->Start(tickCount,
+                                         m_aes_uid, m_aes_pwd, monitoring_code, start_inv,
+                                         initFunc, updateFunc);
             };
-            std::unordered_set<uint32_t> monitoring_code;
+            //
             if (StockTimeTableUnit::IDLE == now_tt.m_mode) {
                 // IDLEに変化したら、その次のモードの取引所で開始処理実行
-                eStockInvestmentsType start_inv = StockTimeTableUnit::ToInvestmentsTypeFromMode(next_mode);
-                m_pOrderingManager->GetMonitoringCode(monitoring_code);
-                b_valid = m_pStarter->Start(tickCount, m_aes_uid, m_aes_pwd, monitoring_code, start_inv, initPortfolio);
-            } else if (StockTimeTableUnit::TOKYO == now_tt.m_mode || StockTimeTableUnit::PTS == now_tt.m_mode) {
+                b_valid = startFunc(next_mode, tickCount);
+            } else if (StockTimeTableUnit::TOKYO == now_tt.m_mode ||
+                       StockTimeTableUnit::PTS == now_tt.m_mode) {
                 // 売買モードに変化したら開始処理実行
-                eStockInvestmentsType start_inv = StockTimeTableUnit::ToInvestmentsTypeFromMode(now_tt.m_mode);
-                m_pOrderingManager->GetMonitoringCode(monitoring_code);
-                b_valid = m_pStarter->Start(tickCount, m_aes_uid, m_aes_pwd, monitoring_code, start_inv, initPortfolio);
+                b_valid = startFunc(now_tt.m_mode, tickCount);
             }
         }
         if (b_valid) {
@@ -229,30 +254,47 @@ private:
     {
         // サーバタイムにローカルの経過時間を加えたファジーな現在時刻
         std::tm now_tm;
-        utility::AddTimeAndDiffMS(m_last_sv_time, (tickCount-m_last_sv_time_tick), now_tm);
+        const int64_t diff_tick = tickCount-m_last_sv_time_tick;
+        garnet::utility_datetime::AddTimeAndDiffMS(m_last_sv_time, diff_tick, now_tm);
         //
         auto now_mode = CorrectTimeTable(tickCount, now_tm);
 
         if (StockTimeTableUnit::TOKYO == now_mode || StockTimeTableUnit::PTS == now_mode) {
-            const eStockInvestmentsType investments_type = StockTimeTableUnit::ToInvestmentsTypeFromMode(now_mode);
+            const eStockInvestmentsType investments_type
+                = StockTimeTableUnit::ToInvestmentsTypeFromMode(now_mode);
             if (m_pStarter->IsReady()) {
                 // 監視銘柄情報更新
-                const int64_t intv_ms = utility::ToMiliSecondsFromSecond(script_mng.GetStockValueIntervalSecond());
-                if ((tickCount - m_last_monitor_tick) > intv_ms) {
-                    m_last_monitor_tick = tickCount;
-                    // 取得要求
-                    m_pSecSession->UpdateValueData([this,
-                                                    investments_type](bool b_success,
-                                                                      const std::wstring& sendtime,
-                                                                      const std::vector<RcvStockValueData>& rcv_valuedata) {
+                if ((tickCount - m_last_monitoring_tick) > m_monitoring_interval_ms) {
+                    m_last_monitoring_tick = tickCount;
+                    m_pSecSession->UpdateValueData(
+                        [this, investments_type](bool b_success,
+                                                 const std::wstring& sendtime,
+                                                 const std::vector<RcvStockValueData>& rcv_valuedata) {
                         if (b_success) {
-                            std::lock_guard<std::mutex> lock(m_mtx); // http関連スレッドから呼ばれるのでlockが必要
-                            m_pOrderingManager->UpdateValueData(investments_type, sendtime, rcv_valuedata);
+                            // http関連スレッドから呼ばれるのでlock
+                            std::lock_guard<std::mutex> lock(m_mtx); 
+                            //
+                            m_pOrderingManager->UpdateValueData(investments_type,
+                                                                sendtime,
+                                                                rcv_valuedata);
+                        }
+                    });
+                }
+                // 当日約定情報更新
+                if ((tickCount - m_last_req_exec_info_tick) > m_exec_info_interval_ms) {
+                    m_last_req_exec_info_tick = tickCount;
+                    m_pSecSession->UpdateExecuteInfo([this](bool b_success,
+                                                            const std::vector<StockExecInfoAtOrder>& rcv_info) {
+                        if (b_success) {
+                            // http関連スレッドから呼ばれるのでlock
+                            std::lock_guard<std::mutex> lock(m_mtx); 
+                            //
+                            m_pOrderingManager->UpdateExecInfo(rcv_info);
                         }
                     });
                 }
                 // 発注管理定期更新
-                const HHMMSS hhmmss(now_tm.tm_hour, now_tm.tm_min, now_tm.tm_sec);
+                const garnet::HHMMSS hhmmss(now_tm.tm_hour, now_tm.tm_min, now_tm.tm_sec);
                 m_pOrderingManager->Update(tickCount, hhmmss, investments_type, m_aes_pwd_sub, script_mng);
             }
         }
@@ -266,13 +308,13 @@ private:
      */
     void Update_Wait(int64_t tickCount)
     {
-        if (m_wait_count > 0) {
+        if (m_wait_count_ms > 0) {
             const int64_t past_tick = tickCount - m_tickcount;
-            if (past_tick >= m_wait_count) {
-                m_wait_count = 0;
+            if (past_tick >= m_wait_count_ms) {
+                m_wait_count_ms = 0;
                 m_sequence = m_after_wait_seq;
             } else {
-                m_wait_count -= past_tick;
+                m_wait_count_ms -= past_tick;
             }
         }
     }
@@ -284,7 +326,7 @@ private:
      */
     bool IsJPXHoliday(const std::tm& src) const
     {
-        const MMDD srcmmdd(src.tm_mon+1, src.tm_mday); // tmは1月が0
+        const garnet::MMDD srcmmdd(src);
         for (const auto& mmdd: m_jpx_holiday) {
             if (mmdd == srcmmdd) {
                 return true;
@@ -295,13 +337,14 @@ private:
 
 public:
     /*!
-     *  @param  securities  証券会社種別
+     *  @param  script_mng  外部設定(スクリプト)管理者
      *  @param  tw_session  twitterとのセッション
      */
-    PIMPL(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session)
+    PIMPL(const TradeAssistantSetting& script_mng,
+          const garnet::TwitterSessionForAuthorPtr& tw_session)
     : m_mtx()
     , m_sequence(SEQ_INITIALIZE)
-    , m_securities(securities)
+    , m_securities(script_mng.GetSecuritiesType())
     , m_pSecSession()
     , m_pTwSession(tw_session)
     , m_pStarter()
@@ -316,10 +359,16 @@ public:
     , m_tickcount(0)
     , m_last_sv_time()
     , m_last_sv_time_tick(0)
-    , m_wait_count(0)
+    , m_wait_count_ms(0)
     , m_after_wait_seq(SEQ_ERROR)
     , m_prev_tt_mode(StockTimeTableUnit::CLOSED)
-    , m_last_monitor_tick(0)
+    , m_last_monitoring_tick(0)
+    , m_monitoring_interval_ms(
+        garnet::utility_datetime::ToMiliSecondsFromSecond(
+            script_mng.GetStockMonitoringIntervalSecond()))
+    , m_exec_info_interval_ms(
+        garnet::utility_datetime::ToMiliSecondsFromSecond(
+            script_mng.GetStockExecInfoIntervalSecond()))
     {
         memset(reinterpret_cast<void*>(&m_last_sv_time), 0, sizeof(m_last_sv_time));
     }
@@ -351,7 +400,7 @@ public:
     }
 
     /*!
-     *  @brief  定期更新処理
+     *  @brief  Update関数
      *  @param[in]  tickCount   経過時間[ミリ秒]
      *  @param[in]  script_mng  外部設定(スクリプト)管理者
      *  @param[out] o_message   メッセージ(格納先)
@@ -382,12 +431,13 @@ public:
 };
 
 /*!
- *  @param  securities  証券会社種別
+ *  @param  script_mng  外部設定(スクリプト)管理者
  *  @param  tw_session  twitterとのセッション
  */
-StockTradingMachine::StockTradingMachine(eSecuritiesType securities, const std::shared_ptr<TwitterSessionForAuthor>& tw_session)
+StockTradingMachine::StockTradingMachine(const TradeAssistantSetting& script_mng,
+                                         const garnet::TwitterSessionForAuthorPtr& tw_session)
 : TradingMachine()
-, m_pImpl(new PIMPL(securities, tw_session))
+, m_pImpl(new PIMPL(script_mng, tw_session))
 {
 }
 /*!
