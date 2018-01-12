@@ -9,10 +9,10 @@
 #include <string>
 #include "boost/date_time/posix_time/posix_time.hpp"
 
-namespace std { struct tm; }
-
 namespace garnet
 {
+struct sTime;
+
 namespace utility_datetime
 {
 
@@ -48,14 +48,14 @@ boost::posix_time::ptime ToLocalTimeFromRFC1123(const std::wstring& rfc1123);
  *  @param[out] o_tm    格納先
  *  @note   ローカル変換なし
  */
-bool ToTimeFromString(const std::string& src, const std::string& format, std::tm& o_tm);
+bool ToTimeFromString(const std::string& src, const std::string& format, garnet::sTime& o_tm);
 /*!
  *  @brief  ptimeからtmに変換
  *  @param[in]  src     ptime
  *  @param[out] o_tm    格納先
  *  @param[in]  tm::tm_isdstは常にfalse(サマータイム考慮しない)
  */
-void ToTimeFromBoostPosixTime(const boost::posix_time::ptime& src, std::tm& o_tm);
+void ToTimeFromBoostPosixTime(const boost::posix_time::ptime& src, garnet::sTime& o_tm);
 
 /*!
  *  @brief  経過時間を得る
@@ -70,7 +70,7 @@ int64_t GetTickCountGeneral();
  *  @param  src 比べる時間
  *  @return 秒差
  */
-uint32_t GetDiffSecondsFromLocalMachineTime(const std::tm& src);
+uint32_t GetDiffSecondsFromLocalMachineTime(const garnet::sTime& src);
 /*!
  *  @brief  システムローカル時間を文字列で得る
  *  @param[in]  format  取得形式 (%H:%M:%S など)
@@ -84,7 +84,7 @@ std::wstring GetLocalMachineTime(const std::wstring& format);
  *  @param[in]  diff_ms 差分ミリ秒
  *  @param[out] o_now   格納先
  */
-void AddTimeAndDiffMS(const std::tm& base_tm, int64_t diff_ms, std::tm& o_now);
+void AddTimeAndDiffMS(const garnet::sTime& base_tm, int64_t diff_ms, garnet::sTime& o_now);
 
 /*!
  *  @brief  指定日時after_day後の00:00までの時間をミリ秒で得る

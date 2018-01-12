@@ -7,7 +7,7 @@
 #include "stock_portfolio.h"
 #include "trade_utility.h"
 
-#include <ctime>
+#include "garnet_time.h"
 
 namespace trading
 {
@@ -17,7 +17,7 @@ namespace trading
  *  @param  src     価格データ
  *  @param  date    取得時刻(サーバ時間を使う)
  */
-void StockValueData::UpdateValueData(const RcvStockValueData& src, const std::tm& date)
+void StockValueData::UpdateValueData(const RcvStockValueData& src, const garnet::sTime& date)
 {
     m_open = src.m_open;
     m_high = src.m_high;
@@ -33,11 +33,7 @@ void StockValueData::UpdateValueData(const RcvStockValueData& src, const std::tm
             return;
         }
     }
-    stockValue vdata(date.tm_hour, date.tm_min, date.tm_sec);
-    vdata.m_value  = src.m_value;
-    vdata.m_volume = src.m_volume;
-
-    m_value_data.push_back(vdata);
+    m_value_data.emplace_back(date, src.m_value, src.m_volume);
 };
 
 } // namespace trading

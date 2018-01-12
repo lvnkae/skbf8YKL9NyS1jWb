@@ -5,15 +5,16 @@
  */
 #include "utility_datetime.h"
 
+#include "hhmmss.h"
+#include "yymmdd.h"
+#include "garnet_time.h"
+
+#include <chrono>
 #include <codecvt>
 #include <ctime>
-#include <chrono>
 #include <sstream>
 #include "boost/date_time.hpp"
 #include "boost/date_time/local_time/local_time.hpp"
-
-#include "hhmmss.h"
-#include "yymmdd.h"
 
 namespace
 {
@@ -53,7 +54,8 @@ boost::posix_time::ptime ToLocalTimeFromRFC1123(const std::wstring& rfc1123)
 boost::posix_time::ptime ToLocalTimeFromRFC1123(const std::string& rfc1123)
 {
     // newしたfacetはストリーム内で解放される(らしい)
-    boost::local_time::local_time_input_facet* inputFacet = new boost::local_time::local_time_input_facet();
+    boost::local_time::local_time_input_facet* inputFacet
+        = new boost::local_time::local_time_input_facet();
     std::stringstream ss;
     ss.imbue(std::locale(ss.getloc(), inputFacet));
     ss.str(rfc1123);
@@ -62,7 +64,8 @@ boost::posix_time::ptime ToLocalTimeFromRFC1123(const std::string& rfc1123)
     // ストリームからldtに変換すると設定したzone_ptrが潰されてしまうので
     // 変換したldtからはUTCだけを得て、別途用意したlocalのtime_zoneからオフセットを得る
     // (正しい使い方と思われるやり方は全部駄目だった)
-    boost::local_time::local_date_time ldt(boost::local_time::local_date_time::utc_time_type(), nullptr);
+    boost::local_time::local_date_time ldt(
+        boost::local_time::local_date_time::utc_time_type(), nullptr);
     ss >> ldt;
     boost::local_time::time_zone_ptr local_zone(new boost::local_time::posix_time_zone("GMT+09"));
     return ldt.utc_time() + local_zone->base_utc_offset() + local_zone->dst_offset();
@@ -76,12 +79,14 @@ boost::posix_time::ptime ToLocalTimeFromRFC1123(const std::string& rfc1123)
  *  @param[out] o_tm    格納先
  *  @note   ローカル変換なし
  */
-bool ToTimeFromString(const std::string& src, const std::string& format, std::tm& o_tm)
+bool ToTimeFromString(const std::string& src, const std::string& format, garnet::sTime& o_tm)
 {
-  std::istringstream ss(src);    
-  ss >> std::get_time(&o_tm, format.c_str());
+    std::tm t_tm;
+    std::istringstream ss(src);
+    ss >> std::get_time(&t_tm, format.c_str());
+    o_tm = std::move(t_tm);
 
-  return !ss.fail();
+    return !ss.fail();
 }
 /*!
  *  @brief  ptimeからtmに変換
@@ -89,7 +94,7 @@ bool ToTimeFromString(const std::string& src, const std::string& format, std::tm
  *  @param[out] o_tm    格納先
  *  @param[in]  tm::tm_isdstは常にfalse(サマータイム考慮しない)
  */
-void ToTimeFromBoostPosixTime(const boost::posix_time::ptime& src, std::tm& o_tm)
+void ToTimeFromBoostPosixTime(const boost::posix_time::ptime& src, garnet::sTime& o_tm)
 {
     boost::gregorian::date d = src.date();
     boost::posix_time::time_duration t = src.time_of_day();
@@ -122,9 +127,10 @@ int64_t GetTickCountGeneral()
  *  @param  src 比べる時間
  *  @return 秒差
  */
-uint32_t GetDiffSecondsFromLocalMachineTime(const std::tm& src)
+uint32_t GetDiffSecondsFromLocalMachineTime(const garnet::sTime& src)
 {
-    std::tm src_tm(src);
+    std::tm src_tm;
+    src.copy(src_tm);
     time_t tt_lc = std::time(nullptr);
     time_t tt_src = std::mktime(&src_tm);
     int32_t tt_dif = static_cast<int32_t>(tt_lc - tt_src);
@@ -157,13 +163,16 @@ std::wstring GetLocalMachineTime(const std::wstring& format)
  *  @param[in]  diff_ms 差分ミリ秒
  *  @param[out] o_now   格納先
  */
-void AddTimeAndDiffMS(const std::tm& base_tm, int64_t diff_ms, std::tm& o_now)
+void AddTimeAndDiffMS(const garnet::sTime& base_tm, int64_t diff_ms, garnet::sTime& o_now)
 {
-    std::tm base_tm_cpy(base_tm);
+    std::tm base_tm_cpy;
+    base_tm.copy(base_tm_cpy);
     time_t tt_base = std::mktime(&base_tm_cpy);
     time_t tt_after = tt_base + static_cast<time_t>(diff_ms/MILISECONDS_OF_1SECOND);
 #if defined(_WINDOWS)
-    localtime_s(&o_now, &tt_after);
+    std::tm o_tm;
+    localtime_s(&o_tm, &tt_after);
+    o_now = std::move(o_tm);
 #else
     o_now = *std::localtime(&tt_after);
 #endif/* defined(_WINDOWS) */
@@ -182,8 +191,10 @@ int64_t GetAfterDayLimitMS(const boost::posix_time::ptime& pt, int32_t after_day
     if (after_day <= 0) {
         return 0;
     }
+    garnet::sTime src_time;
+    ToTimeFromBoostPosixTime(pt, src_time);
     std::tm src_tm;
-    ToTimeFromBoostPosixTime(pt, src_tm);
+    src_time.copy(src_tm);
     std::time_t src_tt = std::mktime(&src_tm);
     std::time_t after_tt = src_tt + SECONDS_OF_1DAY*after_day;
 #if defined(_WINDOWS)
@@ -223,12 +234,18 @@ int64_t ToMiliSecondsFromSecond(int32_t second)
 
 
 /*!
- *  @param  tm  年月日時分秒パラメータ
+ *  @param  stime   年月日時分秒パラメータ
  */
-HHMMSS::HHMMSS(const std::tm& tm)
-: m_hour(tm.tm_hour)
-, m_minute(tm.tm_min)
-, m_second(tm.tm_sec)
+HHMMSS::HHMMSS(const garnet::sTime& stime)
+: m_hour(stime.tm_hour)
+, m_minute(stime.tm_min)
+, m_second(stime.tm_sec)
+{
+}
+HHMMSS::HHMMSS(garnet::sTime&& stime)
+: m_hour(stime.tm_hour)
+, m_minute(stime.tm_min)
+, m_second(stime.tm_sec)
 {
 }
 /*!
@@ -242,9 +259,14 @@ int32_t HHMMSS::GetPastSecond() const
 /*!
  *  @param  tm  年月日時分秒パラメータ
  */
-MMDD::MMDD(const std::tm& tm)
-: m_month(tm.tm_mon+1) // 1始まり
-, m_day(tm.tm_mday)
+MMDD::MMDD(const garnet::sTime& stime)
+: m_month(stime.tm_mon+1) // 1始まり
+, m_day(stime.tm_mday)
+{
+}
+MMDD::MMDD(garnet::sTime&& stime)
+: m_month(stime.tm_mon+1) // 1始まり
+, m_day(stime.tm_mday)
 {
 }
 /*!
@@ -252,7 +274,7 @@ MMDD::MMDD(const std::tm& tm)
  */
 MMDD MMDD::Create(const std::string& src)
 {
-    std::tm mmdd_tm;
+    garnet::sTime mmdd_tm;
     if (utility_datetime::ToTimeFromString(src, "%m/%d", mmdd_tm)) {
         return MMDD(mmdd_tm);
     } else {
@@ -263,9 +285,14 @@ MMDD MMDD::Create(const std::string& src)
 /*!
  *  @param  tm  年月日時分秒パラメータ
  */
-YYMMDD::YYMMDD(const std::tm& tm)
-: MMDD(tm)
-, m_year(tm.tm_year + 1900) // 西暦
+YYMMDD::YYMMDD(const garnet::sTime& stime)
+: MMDD(stime)
+, m_year(stime.tm_year + 1900) // 西暦
+{
+}
+YYMMDD::YYMMDD(garnet::sTime&& stime)
+: MMDD(stime)
+, m_year(stime.tm_year + 1900) // 西暦
 {
 }
 /*!
@@ -273,7 +300,7 @@ YYMMDD::YYMMDD(const std::tm& tm)
  */
 YYMMDD YYMMDD::Create(const std::string& src)
 {
-    std::tm yymmdd_tm;
+    garnet::sTime yymmdd_tm;
     if (utility_datetime::ToTimeFromString(src, "%Y/%m/%d", yymmdd_tm)) {
         if (src.find('/') < 4) {
             yymmdd_tm.tm_year += 100;
@@ -282,6 +309,46 @@ YYMMDD YYMMDD::Create(const std::string& src)
     } else {
         return YYMMDD();
     }
+}
+
+sTime::sTime(const std::tm& src)
+: tm_sec(src.tm_sec)
+, tm_min(src.tm_min)
+, tm_hour(src.tm_hour)
+, tm_mday(src.tm_mday)
+, tm_mon(src.tm_mon)
+, tm_year(src.tm_year)
+, tm_wday(src.tm_wday)
+, tm_yday(src.tm_yday)
+, tm_isdst(src.tm_isdst)
+{
+    static_assert(sizeof(std::tm)==sizeof(garnet::sTime), "");
+}
+
+sTime::sTime(std::tm&& src)
+: tm_sec(src.tm_sec)
+, tm_min(src.tm_min)
+, tm_hour(src.tm_hour)
+, tm_mday(src.tm_mday)
+, tm_mon(src.tm_mon)
+, tm_year(src.tm_year)
+, tm_wday(src.tm_wday)
+, tm_yday(src.tm_yday)
+, tm_isdst(src.tm_isdst)
+{
+}
+
+void sTime::copy(std::tm& dst) const
+{
+    dst.tm_sec = tm_sec;
+    dst.tm_min = tm_min;
+    dst.tm_hour = tm_hour;
+    dst.tm_mday = tm_mday;
+    dst.tm_mon = tm_mon;
+    dst.tm_year = tm_year;
+    dst.tm_wday = tm_wday;
+    dst.tm_yday = tm_yday;
+    dst.tm_isdst = tm_isdst;
 }
 
 } // namespace garnet

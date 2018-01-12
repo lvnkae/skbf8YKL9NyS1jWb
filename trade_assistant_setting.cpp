@@ -13,7 +13,7 @@
 #include "lua_accessor.h"
 #include "update_message.h"
 #include "utility_datetime.h"
-#include "yymmdd.h"
+#include "garnet_time.h"
 
 #include <functional>
 
@@ -24,7 +24,7 @@ namespace trading
 class TradeAssistantSetting::PIMPL
 {
 private:
-    LuaAccessor m_lua_accessor;     //!< luaアクセサ
+    garnet::LuaAccessor m_lua_accessor; //!< luaアクセサ
 
     eTradingType m_trading_type;    //!< 取引種別
     eSecuritiesType m_securities;   //!< 証券会社種別
@@ -90,7 +90,7 @@ private:
      */
     void BuildStockTactics_TriggerUnit(UpdateMessage& o_message, const std::function<void(StockTradingTactics::Trigger&)>& add_func)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
 
         std::string trigger_type_str;
         if (!accessor.GetTableParam("Type", trigger_type_str)) {
@@ -140,7 +140,7 @@ private:
     */
     void BuildStockTactics_OrderCondition(UpdateMessage& o_message, StockTradingTactics::Order& o_order)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
 
         bool is_cond = (accessor.OpenChildTable("Condition") >= 0);
         if (is_cond) {
@@ -162,7 +162,7 @@ private:
      */
     bool BuildStockTactics_OrderCore(UpdateMessage& o_message, std::string& o_type_str, int32_t& o_val_func, int32_t& o_number, StockTradingTactics::Order& o_order)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
         int32_t group_id = 0;
         if (accessor.GetTableParam("GroupID", group_id)) {
             // 戦略グループIDは設定がなくてもエラーではない
@@ -242,7 +242,7 @@ private:
         }
         // 建玉指定
         {
-            LuaAccessor& accessor = m_lua_accessor;
+            garnet::LuaAccessor& accessor = m_lua_accessor;
             bool have_bg = (accessor.OpenChildTable("Bargain") >= 0);
             if (have_bg) {
                 std::string date_str;
@@ -275,7 +275,7 @@ private:
                                        StockCodeContainer& o_codes,
                                        StockTradingTactics& o_tactics)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
 
         // 証券コード
         {
@@ -432,7 +432,7 @@ public:
             return false;
         }
         const std::string setting_file(env->GetTradingScript());
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
 
         if (!accessor.DoFile(setting_file)) {
             o_message.AddErrorMessage("file not found (" + setting_file + ") or syntax error.");
@@ -498,7 +498,7 @@ public:
      */
     bool BuildJPXHoliday(UpdateMessage& o_message, std::vector<garnet::MMDD>& o_holidays)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
         o_message.AddMessage("[BuildJPXHoliday]");
 
         const int32_t num_holiday = accessor.OpenTable("JPXHoliday");
@@ -522,7 +522,7 @@ public:
      */
     bool BuildStockTimeTable(UpdateMessage& o_message, std::vector<StockTimeTableUnit>& o_tt)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
         o_message.AddMessage("[BuildStockTimeTable]");
 
         o_message.AddTab();
@@ -538,7 +538,7 @@ public:
             if (accessor.GetArrayParam(ARRAY_INX_STARTTIME, time_str)) {
                 std::string mode_str;
                 if (accessor.GetArrayParam(ARRAY_INX_MODE, mode_str)) {
-                    std::tm time_work;
+                    garnet::sTime time_work;
                     using garnet::utility_datetime::ToTimeFromString;
                     if (ToTimeFromString(time_str, "%H:%M", time_work) && tt.SetMode(mode_str)) {
                         tt.m_hhmmss.m_hour = time_work.tm_hour;
@@ -566,7 +566,7 @@ public:
                            std::unordered_map<int32_t, StockTradingTactics>& o_tactics,
                            std::vector<std::pair<uint32_t, int32_t>>& o_link)
     {
-        LuaAccessor& accessor = m_lua_accessor;
+        garnet::LuaAccessor& accessor = m_lua_accessor;
         o_message.AddMessage("[BuildStockTactics]");
 
         o_message.AddTab();

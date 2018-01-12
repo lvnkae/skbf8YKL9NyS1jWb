@@ -18,6 +18,7 @@
 #include "twitter_session.h"
 #include "utility_datetime.h"
 #include "yymmdd.h"
+#include "garnet_time.h"
 
 #include <codecvt>
 #include <mutex>
@@ -59,7 +60,7 @@ private:
     garnet::CipherAES m_aes_pwd_sub;    //!< 暗号pwd_sub
 
     int64_t m_tickcount;                        //!< 前回操作時のtickCount
-    std::tm m_last_sv_time;                     //!< 最後にサーバ(証券会社および休日判定)から得た時刻
+    garnet::sTime m_last_sv_time;               //!< 最後にサーバ(証券会社および休日判定)から得た時刻
     int64_t m_last_sv_time_tick;                //!< ↑を得たtickCount
     int64_t m_wait_count_ms;                    //!< ウェイトカウント[ミリ秒]
     eSequence m_after_wait_seq;                 //!< ウェイト開けの遷移先シーケンス
@@ -176,11 +177,11 @@ private:
      *  @param  tickCount   経過時間[ミリ秒]
      *  @param  now_tm      現在時刻(ファジー)
      */
-    StockTimeTableUnit::eMode CorrectTimeTable(int64_t tickCount, const std::tm& now_tm)
+    StockTimeTableUnit::eMode CorrectTimeTable(int64_t tickCount, const garnet::sTime& now_tm)
     {
         StockTimeTableUnit::eMode prev_mode = m_prev_tt_mode;
         StockTimeTableUnit::eMode next_mode = StockTimeTableUnit::CLOSED;
-        StockTimeTableUnit now_tt(now_tm.tm_hour, now_tm.tm_min, now_tm.tm_sec);
+        StockTimeTableUnit now_tt(now_tm);
         {
             bool is_smallest = true;
             for (const auto& tt : m_timetable) {
@@ -253,7 +254,7 @@ private:
     void Update_MainTrade(int64_t tickCount, TradeAssistantSetting& script_mng, UpdateMessage& o_message)
     {
         // サーバタイムにローカルの経過時間を加えたファジーな現在時刻
-        std::tm now_tm;
+        garnet::sTime now_tm;
         const int64_t diff_tick = tickCount-m_last_sv_time_tick;
         garnet::utility_datetime::AddTimeAndDiffMS(m_last_sv_time, diff_tick, now_tm);
         //
@@ -294,8 +295,7 @@ private:
                     });
                 }
                 // 発注管理定期更新
-                const garnet::HHMMSS hhmmss(now_tm.tm_hour, now_tm.tm_min, now_tm.tm_sec);
-                m_pOrderingManager->Update(tickCount, hhmmss, investments_type, m_aes_pwd_sub, script_mng);
+                m_pOrderingManager->Update(tickCount, now_tm, investments_type, m_aes_pwd_sub, script_mng);
             }
         }
 
@@ -324,7 +324,7 @@ private:
      *  @param  src 調べる日
      *  @retval true    休業日だ
      */
-    bool IsJPXHoliday(const std::tm& src) const
+    bool IsJPXHoliday(const garnet::sTime& src) const
     {
         const garnet::MMDD srcmmdd(src);
         for (const auto& mmdd: m_jpx_holiday) {

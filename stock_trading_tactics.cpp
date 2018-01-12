@@ -11,7 +11,6 @@
 #include "trade_define.h"
 
 #include <algorithm>
-#include <ctime>
 
 namespace trading
 {

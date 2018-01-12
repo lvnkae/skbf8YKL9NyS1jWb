@@ -6,6 +6,8 @@
 #include "lua_accessor.h"
 #include "lua.hpp"
 
+namespace garnet
+{
 namespace LuaAccessorLocal
 {
 
@@ -187,10 +189,10 @@ LuaAccessor::LuaAccessor()
  */
 LuaAccessor::~LuaAccessor()
 {
-    if (m_pState != nullptr) {
-        lua_close(m_pState);
-        m_pState = nullptr;
-    }
+}
+void LuaAccessor::luaStateDeleter::operator()(lua_State* state_ptr) const
+{
+    lua_close(state_ptr);
 }
 
 /*!
@@ -198,17 +200,19 @@ LuaAccessor::~LuaAccessor()
  */
 bool LuaAccessor::DoFile(const std::string& file_name)
 {
-    return !luaL_dofile(m_pState, file_name.c_str());
+    return !luaL_dofile(m_pState.get(), file_name.c_str());
 }
 
 /*!
  *  @brief  スタックを全クリアする
  */
 void LuaAccessor::ClearStack()
-{
-    int now_top = lua_gettop(m_pState);
-    lua_pop(m_pState, lua_gettop(m_pState));
-    int now_top2 = lua_gettop(m_pState);
+{  
+    lua_State* state_ptr = m_pState.get();
+
+    int now_top = lua_gettop(state_ptr);
+    lua_pop(state_ptr, lua_gettop(state_ptr));
+    int now_top2 = lua_gettop(state_ptr);
 }
 
 
@@ -219,15 +223,17 @@ void LuaAccessor::ClearStack()
  */
 int32_t LuaAccessor::OpenTable(const std::string& table_name)
 {
+    lua_State* state_ptr = m_pState.get();
+
     // 現在のスタック位置を保持
-    m_table_top_stack.push(lua_gettop(m_pState));
+    m_table_top_stack.push(lua_gettop(state_ptr));
     //
-    int32_t ret = lua_getglobal(m_pState, table_name.c_str());
+    int32_t ret = lua_getglobal(state_ptr, table_name.c_str());
     if (ret == 0) {
         return -1;
     }
     else {
-        return static_cast<int32_t>(lua_rawlen(m_pState, LuaAccessorLocal::STACKTOP));
+        return static_cast<int32_t>(lua_rawlen(state_ptr, LuaAccessorLocal::STACKTOP));
     }
 }
 /*!
@@ -237,15 +243,17 @@ int32_t LuaAccessor::OpenTable(const std::string& table_name)
  */
 int32_t LuaAccessor::OpenChildTable(const std::string& table_name)
 {
+    lua_State* state_ptr = m_pState.get();
+
     // 現在のスタック位置を保持
-    m_table_top_stack.push(lua_gettop(m_pState));
+    m_table_top_stack.push(lua_gettop(state_ptr));
     //
-    int32_t ret = lua_getfield(m_pState, LuaAccessorLocal::STACKTOP, table_name.c_str());
+    int32_t ret = lua_getfield(state_ptr, LuaAccessorLocal::STACKTOP, table_name.c_str());
     if (ret == 0) {
         return -1;
     }
     else {
-        return static_cast<int32_t>(lua_rawlen(m_pState, LuaAccessorLocal::STACKTOP));
+        return static_cast<int32_t>(lua_rawlen(state_ptr, LuaAccessorLocal::STACKTOP));
     }
 }
 /*!
@@ -255,16 +263,18 @@ int32_t LuaAccessor::OpenChildTable(const std::string& table_name)
  */
 int32_t LuaAccessor::OpenChildTable(int32_t table_inx)
 {
+    lua_State* state_ptr = m_pState.get();
+
     // 現在のスタック位置を保持
-    m_table_top_stack.push(lua_gettop(m_pState));
+    m_table_top_stack.push(lua_gettop(state_ptr));
     //
     int32_t lua_tbl_inx = table_inx + 1;
-    int32_t ret = lua_geti(m_pState, LuaAccessorLocal::STACKTOP, lua_tbl_inx);
+    int32_t ret = lua_geti(state_ptr, LuaAccessorLocal::STACKTOP, lua_tbl_inx);
     if (ret == 0) {
         return -1;
     }
     else {
-        return static_cast<int32_t>(lua_rawlen(m_pState, LuaAccessorLocal::STACKTOP));
+        return static_cast<int32_t>(lua_rawlen(state_ptr, LuaAccessorLocal::STACKTOP));
     }
 }
 /*!
@@ -272,8 +282,10 @@ int32_t LuaAccessor::OpenChildTable(int32_t table_inx)
  */
 void LuaAccessor::CloseTable()
 {
+    lua_State* state_ptr = m_pState.get();
+
     // テーブルを開いて以降のスタック操作を綺麗にする
-    lua_pop(m_pState, lua_gettop(m_pState) - m_table_top_stack.top());
+    lua_pop(state_ptr, lua_gettop(state_ptr) - m_table_top_stack.top());
     m_table_top_stack.pop();
 }
 
@@ -285,26 +297,30 @@ void LuaAccessor::CloseTable()
  */
 bool LuaAccessor::GetGlobalParam(const std::string& param_name, std::string& o_param)
 {
-    int32_t ret = lua_getglobal(m_pState, param_name.c_str());
+    lua_State* state_ptr = m_pState.get();
+
+    int32_t ret = lua_getglobal(state_ptr, param_name.c_str());
     if (ret == 0) {
         return false;
     }
-    if (!lua_isstring(m_pState, LuaAccessorLocal::STACKTOP)) {
+    if (!lua_isstring(state_ptr, LuaAccessorLocal::STACKTOP)) {
         return false;
     }
-    o_param = lua_tostring(m_pState, LuaAccessorLocal::STACKTOP);
+    o_param = lua_tostring(state_ptr, LuaAccessorLocal::STACKTOP);
     return true;
 }
 bool LuaAccessor::GetGlobalParam(const std::string& param_name, int32_t& o_param)
 {
-    int32_t ret = lua_getglobal(m_pState, param_name.c_str());
+    lua_State* state_ptr = m_pState.get();
+
+    int32_t ret = lua_getglobal(state_ptr, param_name.c_str());
     if (ret == 0) {
         return false;
     }
-    if (!lua_isinteger(m_pState, LuaAccessorLocal::STACKTOP)) {
+    if (!lua_isinteger(state_ptr, LuaAccessorLocal::STACKTOP)) {
         return false;
     }
-    o_param = static_cast<int32_t>(lua_tointeger(m_pState, LuaAccessorLocal::STACKTOP));
+    o_param = static_cast<int32_t>(lua_tointeger(state_ptr, LuaAccessorLocal::STACKTOP));
     return true;
 }
 
@@ -313,18 +329,18 @@ bool LuaAccessor::GetGlobalParam(const std::string& param_name, int32_t& o_param
  *  @param[in]  param_name  パラメータ名
  *  @param[out] o_param     パラメータ格納先
  */
-bool LuaAccessor::GetTableParam(const std::string& param_name, std::string& o_param) { return LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
-bool LuaAccessor::GetTableParam(const std::string& param_name, int32_t& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
-bool LuaAccessor::GetTableParam(const std::string& param_name, float32& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
-bool LuaAccessor::GetTableParam(const std::string& param_name, float64& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
-bool LuaAccessor::GetTableParam(const std::string& param_name, bool& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState, param_name, o_param); }
+bool LuaAccessor::GetTableParam(const std::string& param_name, std::string& o_param) { return LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_name, o_param); }
+bool LuaAccessor::GetTableParam(const std::string& param_name, int32_t& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_name, o_param); }
+bool LuaAccessor::GetTableParam(const std::string& param_name, float32& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_name, o_param); }
+bool LuaAccessor::GetTableParam(const std::string& param_name, float64& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_name, o_param); }
+bool LuaAccessor::GetTableParam(const std::string& param_name, bool& o_param) { return  LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_name, o_param); }
 /*!
  *  @brief  配列パラメータ取得
  *  @param[in]  param_inx   パラメータインックス(0始まり)
  *  @param[out] o_param     パラメータ格納先
  */
-bool LuaAccessor::GetArrayParam(int32_t param_inx, std::string& o_param) {return LuaAccessorLocal::GetTableParamWrapper(m_pState, param_inx, o_param); }
-bool LuaAccessor::GetArrayParam(int32_t param_inx, int32_t& o_param) {return LuaAccessorLocal::GetTableParamWrapper(m_pState, param_inx, o_param); }
+bool LuaAccessor::GetArrayParam(int32_t param_inx, std::string& o_param) {return LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_inx, o_param); }
+bool LuaAccessor::GetArrayParam(int32_t param_inx, int32_t& o_param) {return LuaAccessorLocal::GetTableParamWrapper(m_pState.get(), param_inx, o_param); }
 
 /*!
 *  @brief  lua関数リファレンス取得
@@ -337,14 +353,16 @@ bool LuaAccessor::GetArrayParam(int32_t param_inx, int32_t& o_param) {return Lua
 */
 bool LuaAccessor::GetLuaFunctionReference(const std::string& param_name, int32_t& o_ref)
 {
-    int32_t ret = lua_getfield(m_pState, LuaAccessorLocal::STACKTOP, param_name.c_str());
+    lua_State* state_ptr = m_pState.get();
+
+    int32_t ret = lua_getfield(state_ptr, LuaAccessorLocal::STACKTOP, param_name.c_str());
     if (ret == 0) {
         return false;
     }
-    if (!lua_isfunction(m_pState, LuaAccessorLocal::STACKTOP)) {
+    if (!lua_isfunction(state_ptr, LuaAccessorLocal::STACKTOP)) {
         return false;
     }
-    o_ref = luaL_ref(m_pState, LUA_REGISTRYINDEX);
+    o_ref = luaL_ref(state_ptr, LUA_REGISTRYINDEX);
     return true;
 }
 /*!
@@ -354,9 +372,11 @@ bool LuaAccessor::GetLuaFunctionReference(const std::string& param_name, int32_t
  */
 bool LuaAccessor::CallLuaBoolFunction(int32_t func_ref, float64 f1, float64 f2, float64 f3, float64 f4)
 {
-    return LuaAccessorLocal::CallLuaBoolFunction(m_pState, func_ref, f1, f2, f3, f4);
+    return LuaAccessorLocal::CallLuaBoolFunction(m_pState.get(), func_ref, f1, f2, f3, f4);
 }
 float64 LuaAccessor::CallLuaFloatFunction(int32_t func_ref, float64 f1, float64 f2, float64 f3, float64 f4)
 {
-    return LuaAccessorLocal::CallLuaValueFunction<float64>(m_pState, func_ref, f1, f2, f3, f4);
+    return LuaAccessorLocal::CallLuaValueFunction<float64>(m_pState.get(), func_ref, f1, f2, f3, f4);
 }
+
+} // namespace

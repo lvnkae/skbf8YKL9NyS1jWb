@@ -5,10 +5,9 @@
  */
 #pragma once
 
-#include <ctime>
-
 namespace garnet
 {
+struct sTime;
 
 struct HHMMSS
 {
@@ -23,14 +22,8 @@ struct HHMMSS
     {
     }
 
-    HHMMSS(int32_t h, int32_t m, int32_t s)
-    : m_hour(h)
-    , m_minute(m)
-    , m_second(s)
-    {
-    }
-
-    HHMMSS(const std::tm&);
+    HHMMSS(const garnet::sTime&);
+    HHMMSS(garnet::sTime&&);
 
     /*!
      *  @brief  00:00:00‚©‚ç‚ÌŒo‰ß•b”‚ğ“¾‚é

@@ -36,10 +36,10 @@ struct StockValueData
         {
         }
 
-        stockValue(int32_t h, int32_t m, int32_t s)
-        : m_hhmmss(h, m, s)
-        , m_value(0.f)
-        , m_volume(0)
+        stockValue(const garnet::sTime& tm, float64 value, int64_t volume)
+        : m_hhmmss(tm)
+        , m_value(value)
+        , m_volume(volume)
         {
         }
     };
@@ -75,7 +75,7 @@ struct StockValueData
      *  @param  src     価格データ
      *  @param  date    取得時刻(サーバ時間を使う)
      */
-    void UpdateValueData(const RcvStockValueData& src, const std::tm& date);
+    void UpdateValueData(const RcvStockValueData& src, const garnet::sTime& date);
 };
 
 /*!

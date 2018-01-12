@@ -11,6 +11,9 @@
 #include <string>
 
 struct lua_State;
+
+namespace garnet
+{
 class LuaAccessor;
 
 /*!
@@ -105,8 +108,11 @@ private:
     LuaAccessor(const LuaAccessor&);
     LuaAccessor& operator= (const LuaAccessor&);
 
-    //!< Luaステート(専用の終了処理を通す必要があるので生ポ…)
-    lua_State* m_pState;
+    //!< Luaステート
+    struct luaStateDeleter { void operator()(lua_State*) const; };
+    std::unique_ptr<lua_State, luaStateDeleter> m_pState;
     //!< Luaテーブルを開いた時のスタック位置
     std::stack<int32_t> m_table_top_stack;
 };
+
+} // namespace garnet

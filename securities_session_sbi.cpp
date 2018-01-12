@@ -19,6 +19,7 @@
 #include "utility_python.h"
 #include "utility_string.h"
 #include "yymmdd.h"
+#include "garnet_time.h"
 
 #include "cpprest/http_client.h"
 #include "cpprest/filestream.h"
@@ -507,7 +508,7 @@ public:
         web::http::client::http_client http_client(url);
         http_client.request(request).then([this, url, callback](web::http::http_response response)
         {
-            std::tm date_tm;
+            garnet::sTime date_tm;
             const utility::string_t date_str(std::move(response.headers().date()));
             auto ptime = std::move(garnet::utility_datetime::ToLocalTimeFromRFC1123(date_str));
             garnet::utility_datetime::ToTimeFromBoostPosixTime(ptime, date_tm);
@@ -536,6 +537,8 @@ public:
                 }
                 const list l = extract<list>(t[1]);
                 const auto len = boost::python::len(l);
+                garnet::sTime exe_tm;
+                exe_tm.tm_year = date_tm.tm_year;
                 std::vector<StockExecInfoAtOrder> rcv_data;
                 rcv_data.reserve(len);
                 for (auto inx = 0; inx < len; inx++) {
@@ -552,14 +555,12 @@ public:
                     const list exe_list = extract<list>(elem[6]);
                     const auto len_exe = boost::python::len(exe_list);
                     exe_info.m_exec.reserve(len_exe);
-                    std::tm exe_tm;
                     for (auto exe_inx = 0; exe_inx < len_exe; exe_inx++) {
                         auto exe_elem = exe_list[exe_inx];
                         const std::string datetime = std::move(extract<std::string>(exe_elem[0]));
                         const int32_t number = extract<int32_t>(exe_elem[1]);
                         const float64 value = extract<float64>(exe_elem[2]);
                         utility_datetime::ToTimeFromString(datetime, "%m/%d %H:%M:%S", exe_tm);
-                        exe_tm.tm_year = date_tm.tm_year;
                         exe_info.m_exec.emplace_back(exe_tm, number, value);
                     }
                     rcv_data.emplace_back(std::move(exe_info));

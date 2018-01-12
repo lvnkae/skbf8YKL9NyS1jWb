@@ -22,6 +22,7 @@
 #include "utility_datetime.h"
 #include "utility_string.h"
 #include "yymmdd.h"
+#include "garnet_time.h"
 
 #include <list>
 
@@ -791,7 +792,7 @@ public:
     {
         auto itMtd = m_monitoring_data.find(investments_type);
         if (itMtd != m_monitoring_data.end()) {
-            std::tm tm_send; // 価格データ送信時刻(サーバタイム)
+            garnet::sTime tm_send; // 価格データ送信時刻(サーバタイム)
             auto pt(garnet::utility_datetime::ToLocalTimeFromRFC1123(sendtime));
             garnet::utility_datetime::ToTimeFromBoostPosixTime(pt, tm_send);
             auto& valuedata(itMtd->second);

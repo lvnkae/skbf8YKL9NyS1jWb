@@ -6,10 +6,10 @@
 #pragma once
 
 #include <string>
-#include <ctime>
 
 namespace garnet
 {
+struct sTime;
 
 /*!
  *  @brief  Œ“ú
@@ -25,13 +25,8 @@ struct MMDD
     {
     }
 
-    MMDD(int32_t m, int32_t d)
-    : m_month(m)
-    , m_day(d)
-    {
-    }
-
-    MMDD(const std::tm&);
+    MMDD(const garnet::sTime&);
+    MMDD(garnet::sTime&&);
 
     /*!
      *  @brief  "MM/DD"Œ`®‚ÌŒ“ú•¶š—ñ‚©‚ç¶¬
@@ -63,13 +58,8 @@ struct YYMMDD : public MMDD
     {
     }
 
-    YYMMDD(int32_t y, int32_t m, int32_t d)
-    : MMDD(m, d)
-    , m_year(y)
-    {
-    }
-
-    YYMMDD(const std::tm&);
+    YYMMDD(const garnet::sTime&);
+    YYMMDD(garnet::sTime&&);
 
     /*!
      *  @brief  "YYYY/MM/DD"Œ`®‚Ì”NŒ“ú•¶š—ñ‚©‚ç¶¬

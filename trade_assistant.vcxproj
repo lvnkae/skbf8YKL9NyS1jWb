@@ -255,6 +255,7 @@
   <ItemGroup>
     <ClInclude Include="cipher_aes.h" />
     <ClInclude Include="environment.h" />
+    <ClInclude Include="garnet_time.h" />
     <ClInclude Include="hhmmss.h" />
     <ClInclude Include="holiday_investigator.h" />
     <ClInclude Include="http_cookies.h" />

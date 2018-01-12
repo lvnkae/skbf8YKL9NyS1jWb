@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+namespace garnet { struct sTime; }
+
 namespace trading
 {
 
@@ -40,8 +42,8 @@ struct StockTimeTableUnit
     , m_mode(CLOSED)
     {
     }
-    StockTimeTableUnit(int32_t h, int32_t m, int32_t s)
-    : m_hhmmss(h, m, s)
+    StockTimeTableUnit(const garnet::sTime& time)
+    : m_hhmmss(time)
     , m_mode(CLOSED)
     {
     }
@@ -214,7 +216,7 @@ struct StockExecInfo
     {
     }
 
-    StockExecInfo(const std::tm& datetime,
+    StockExecInfo(const garnet::sTime& datetime,
                   int32_t number,
                   float64 value)
     : m_number(number)
