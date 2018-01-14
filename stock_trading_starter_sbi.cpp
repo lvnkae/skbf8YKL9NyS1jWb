@@ -10,8 +10,8 @@
 
 #include "cipher_aes.h"
 #include "random_generator.h"
-#include "twitter_session.h"
-#include "utility_datetime.h"
+#include "twitter/twitter_session.h"
+#include "utility/utility_datetime.h"
 
 namespace trading
 {
@@ -29,9 +29,9 @@ private:
     //!< 証券会社とのセッションを無アクセスで維持できる時間[ミリ秒]
     const int64_t m_session_keep_ms;
     //!< 証券会社とのセッション
-    std::shared_ptr<SecuritiesSession> m_pSecSession;
+    SecuritiesSessionPtr m_pSecSession;
     //!< twitterとのセッション(メッセージ通知用)
-    std::shared_ptr<garnet::TwitterSessionForAuthor> m_pTwSession;
+    garnet::TwitterSessionForAuthorPtr m_pTwSession;
 
     eSequence m_sequence;                                   //!< シーケンス
     eStockInvestmentsType m_last_register_investments;      //!< 最後に監視銘柄を登録した取引所種別
@@ -89,8 +89,8 @@ public:
      *  @param  tw_session  twitterとのセッション
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    PIMPL(const std::shared_ptr<SecuritiesSession>& sec_session,
-          const std::shared_ptr<garnet::TwitterSessionForAuthor>& tw_session,
+    PIMPL(const SecuritiesSessionPtr& sec_session,
+          const garnet::TwitterSessionForAuthorPtr& tw_session,
           const TradeAssistantSetting& script_mng)
     : m_session_keep_ms(garnet::utility_datetime::ToMiliSecondsFromMinute(script_mng.GetSessionKeepMinute()))
     , m_pSecSession(sec_session)
@@ -121,8 +121,8 @@ public:
      *  @retval true                成功
      */
     bool Start(int64_t tickCount,
-               const garnet::CipherAES& aes_uid,
-               const garnet::CipherAES& aes_pwd,
+               const garnet::CipherAES_string& aes_uid,
+               const garnet::CipherAES_string& aes_pwd,
                const StockCodeContainer& monitoring_code,
                eStockInvestmentsType investments_type,
                const InitMonitoringBrandFunc& init_func,
@@ -174,8 +174,8 @@ public:
  *  @param  tw_session  twitterとのセッション
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
-StockTradingStarterSbi::StockTradingStarterSbi(const std::shared_ptr<SecuritiesSession>& sec_session,
-                                               const std::shared_ptr<garnet::TwitterSessionForAuthor>& tw_session,
+StockTradingStarterSbi::StockTradingStarterSbi(const SecuritiesSessionPtr& sec_session,
+                                               const garnet::TwitterSessionForAuthorPtr& tw_session,
                                                const TradeAssistantSetting& script_mng)
 : StockTradingStarter()
 , m_pImpl(new PIMPL(sec_session, tw_session, script_mng))
@@ -206,8 +206,8 @@ bool StockTradingStarterSbi::IsReady() const
  *  @param  update_func         保有銘柄更新関数
  */
 bool StockTradingStarterSbi::Start(int64_t tickCount,
-                                   const garnet::CipherAES& aes_uid,
-                                   const garnet::CipherAES& aes_pwd,
+                                   const garnet::CipherAES_string& aes_uid,
+                                   const garnet::CipherAES_string& aes_pwd,
                                    const StockCodeContainer& monitoring_code,
                                    eStockInvestmentsType investments_type,
                                    const InitMonitoringBrandFunc& init_func,

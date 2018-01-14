@@ -9,11 +9,11 @@
 #include "stock_trading_tactics.h"
 #include "trade_container.h"
 #include "trade_struct.h"
-
-#include "lua_accessor.h"
 #include "update_message.h"
-#include "utility_datetime.h"
+
 #include "garnet_time.h"
+#include "lua_accessor.h"
+#include "utility/utility_datetime.h"
 
 #include <functional>
 

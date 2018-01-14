@@ -5,21 +5,21 @@
 */
 #include "environment.h"
 
+#include "python/python_config.h"
+#include "twitter/twitter_config.h"
+
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/ini_parser.hpp"
 #include "boost/optional.hpp"
 
-#if defined(PYTHON_USE_WCHAR)
-#include <codecvt>
-#endif/* PYTHON_USE_WCHAR */
-
+//! 自身の弱参照
 std::weak_ptr<Environment> Environment::m_pInstance;
 
 /*!
- *  @brief  インスタンス生成
+ *  @brief  インスタンス生成(static)
  *  @return インスタンス共有ポインタ
  */
-std::shared_ptr<Environment> Environment::Create(void)
+std::shared_ptr<Environment> Environment::Create()
 {
     if (m_pInstance.lock()) {
         std::shared_ptr<Environment> _empty_instance;
@@ -28,9 +28,35 @@ std::shared_ptr<Environment> Environment::Create(void)
         std::shared_ptr<Environment> _instance(new Environment());
         m_pInstance = _instance;
 
-        _instance->Initialize();
+        _instance->initialize();
 
         return _instance;
+    }
+}
+
+/*!
+ *  @brief  python設定を得る(static)
+ */
+const garnet::python_config_ref Environment::GetPythonConfig()
+{
+    std::shared_ptr<const Environment> p = m_pInstance.lock();
+    if (nullptr != p) {
+        return p->m_python_config;
+    } else {
+        return garnet::python_config_ref();
+    }
+}
+
+/*!
+ *  @brief  twitter設定を得る(static)
+ */
+const garnet::twitter_config_ref Environment::GetTwitterConfig()
+{
+    std::shared_ptr<const Environment> p = m_pInstance.lock();
+    if (nullptr != p) {
+        return p->m_twitter_config;
+    } else {
+        return garnet::twitter_config_ref();
     }
 }
 
@@ -38,7 +64,7 @@ std::shared_ptr<Environment> Environment::Create(void)
  *  @brief
  */
 Environment::Environment()
-: m_python_home()
+: m_python_config()
 , m_trading_script()
 {
 }
@@ -46,20 +72,18 @@ Environment::Environment()
 /*!
  *  @brief  初期化
  */
-void Environment::Initialize()
+void Environment::initialize()
 {
     boost::property_tree::ptree pt;
     boost::property_tree::read_ini("trade_assistant.ini", pt);
 
     {
-        boost::optional<std::string> str = pt.get_optional<std::string>("Path.PythonHome");
-#if defined(PYTHON_USE_WCHAR)
-        std::string python_work(str.get());
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
-        m_python_home = utfconv.from_bytes(python_work);
-#else
-        m_python_home = str.get();
-#endif/* PYTHON_USE_WCHAR */
+        boost::optional<std::string> str = pt.get_optional<std::string>("Initialize.Python");
+        m_python_config.reset(new garnet::python_config(str.get()));
+    }
+    {
+        boost::optional<std::string> str = pt.get_optional<std::string>("Initialize.Twitter");
+        m_twitter_config.reset(new garnet::twitter_config(str.get()));
     }
     {
         boost::optional<std::string> str = pt.get_optional<std::string>("Script.TradingScript");

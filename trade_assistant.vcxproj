@@ -168,7 +168,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <UseFullPaths>true</UseFullPaths>
-      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\python27\include;D:\lib\cryptopp565</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\python27\include;D:\lib\cryptopp565;D:\CPW\idea\tools\trade_assistant\garnet\header</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -236,7 +236,7 @@
       <SDLCheck>true</SDLCheck>
       <DebugInformationFormat>None</DebugInformationFormat>
       <TreatWarningAsError>false</TreatWarningAsError>
-      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\Python27\include;D:\lib\cryptopp565;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\lib\lua\include;D:\lib\python\Python27\include;D:\lib\cryptopp565;D:\CPW\idea\tools\trade_assistant\garnet\header;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <UseFullPaths>true</UseFullPaths>
     </ClCompile>
@@ -253,16 +253,11 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cipher_aes.h" />
     <ClInclude Include="environment.h" />
-    <ClInclude Include="garnet_time.h" />
-    <ClInclude Include="hhmmss.h" />
     <ClInclude Include="holiday_investigator.h" />
-    <ClInclude Include="http_cookies.h" />
-    <ClInclude Include="lua_accessor.h" />
-    <ClInclude Include="random_generator.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="securities_session.h" />
+    <ClInclude Include="securities_session_fwd.h" />
     <ClInclude Include="securities_session_sbi.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="stock_code.h" />
@@ -285,24 +280,13 @@
     <ClInclude Include="trade_struct.h" />
     <ClInclude Include="trade_utility.h" />
     <ClInclude Include="trading_machine.h" />
-    <ClInclude Include="twitter_session.h" />
     <ClInclude Include="update_message.h" />
-    <ClInclude Include="utility_datetime.h" />
-    <ClInclude Include="utility_debug.h" />
-    <ClInclude Include="utility_http.h" />
-    <ClInclude Include="utility_python.h" />
-    <ClInclude Include="utility_string.h" />
     <ClInclude Include="win_main.h" />
     <ClInclude Include="win_main_struct.h" />
-    <ClInclude Include="yymmdd.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cipher_aes.cpp" />
     <ClCompile Include="environment.cpp" />
     <ClCompile Include="holiday_investigator.cpp" />
-    <ClCompile Include="http_cookies.cpp" />
-    <ClCompile Include="lua_accessor.cpp" />
-    <ClCompile Include="random_generator.cpp" />
     <ClCompile Include="securities_session.cpp" />
     <ClCompile Include="securities_session_sbi.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -327,12 +311,6 @@
     <ClCompile Include="trade_struct.cpp" />
     <ClCompile Include="trade_utility.cpp" />
     <ClCompile Include="trading_machine.cpp" />
-    <ClCompile Include="twitter_session.cpp" />
-    <ClCompile Include="utility_datetime.cpp" />
-    <ClCompile Include="utility_debug.cpp" />
-    <ClCompile Include="utility_http.cpp" />
-    <ClCompile Include="utility_python.cpp" />
-    <ClCompile Include="utility_string.cpp" />
     <ClCompile Include="win_main.cpp" />
     <ClCompile Include="win_main_struct.cpp" />
   </ItemGroup>

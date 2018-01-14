@@ -6,23 +6,25 @@
  */
 #pragma once
 
+#include "python/python_config_fwd.h"
+#include "twitter/twitter_config_fwd.h"
+
 #include <memory>
 #include <string>
-
-class Environment;
 
 /*!
  *  @note   singleton
  *  @note   インスタンスは明示的に生成する(呼出側がshared_ptrで保持)
  *  @note   "初回インスタンス取得時生成"ではない
  */
+class Environment;
 class Environment
 {
 public:
     /*!
      *  @brief  インスタンス生成 + 初期化
      *  @return インスタンス共有ポインタ
-     *  @note   戻したshared_ptrが有効な間は空shared_ptrを返す
+     *  @note   生成済みなら空shared_ptrを返す
      */
     static std::shared_ptr<Environment> Create();
     /*!
@@ -33,34 +35,36 @@ public:
     static std::weak_ptr<const Environment> GetInstance() { return m_pInstance; }
 
     /*!
+     *  @brief  python設定を得る
+     */
+    static const garnet::python_config_ref GetPythonConfig();
+    /*!
+     *  @brief  twitter設定を得る
+     */
+    static const garnet::twitter_config_ref GetTwitterConfig();
+
+    /*!
      *  @brief  トレーディングスクリプト名を得る
      */
     std::string GetTradingScript() const { return m_trading_script; }
 
-    /*!
-     *  @brief  Pythonのインストールパス(full)を得る
-     */
-    static PYCHAR* GetPythonHome() {
-        std::shared_ptr<const Environment> p = Environment::GetInstance().lock();
-        if (nullptr == p) {
-            return nullptr;
-        }
-        //  戻り値が非constなのはPy_SetPythonHomeがそれを要求するため…
-        return const_cast<PYCHAR*>(p->m_python_home.c_str());
-    }
-
 private:
     Environment();
     Environment(const Environment&);
+    Environment(Environment&&);
     Environment& operator= (const Environment&);
 
     /*!
      *  @brief  初期化
      */
-    void Initialize();
+    void initialize();
 
-    PYSTRING m_python_home;         //! Pythonインストールパス
-    std::string m_trading_script;   //! トレーディングスクリプト名
-
-    static std::weak_ptr<Environment> m_pInstance; //! 自身の弱参照
+    //! トレーディングスクリプト名
+    std::string m_trading_script;
+    //! python設定  
+    std::shared_ptr<garnet::python_config> m_python_config;
+    //! twitter設定  
+    std::shared_ptr<garnet::twitter_config> m_twitter_config;
+    //! 自身の弱参照
+    static std::weak_ptr<Environment> m_pInstance;
 };

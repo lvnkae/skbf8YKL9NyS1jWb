@@ -15,14 +15,14 @@
 #include "trade_assistant_setting.h"
 #include "trade_struct.h"
 #include "trade_utility.h"
+#include "update_message.h"
 
 #include "cipher_aes.h"
-#include "twitter_session.h"
-#include "update_message.h"
-#include "utility_datetime.h"
-#include "utility_string.h"
-#include "yymmdd.h"
 #include "garnet_time.h"
+#include "yymmdd.h"
+#include "twitter/twitter_session.h"
+#include "utility/utility_datetime.h"
+#include "utility/utility_string.h"
 
 #include <list>
 
@@ -613,7 +613,7 @@ private:
      */
     bool IssueOrderCore(const StockTradingCommand& command,
                         eStockInvestmentsType investments,
-                        const garnet::CipherAES& aes_pwd)
+                        const garnet::CipherAES_string& aes_pwd)
     {
         const auto callback = [this, investments](bool b_result,
                                                   const RcvResponseStockOrder& rcv_order,
@@ -686,7 +686,7 @@ private:
      *  @param  investments æˆøŠí•Ê
      *  @param  aes_pwd
      */
-    void IssueOrder(eStockInvestmentsType investments, const garnet::CipherAES& aes_pwd)
+    void IssueOrder(eStockInvestmentsType investments, const garnet::CipherAES_string& aes_pwd)
     {
         if (m_command_list.empty()) {
             return; // ‹ó
@@ -920,7 +920,7 @@ public:
     void Update(int64_t tickCount,
                 const garnet::HHMMSS& hhmmss,
                 eStockInvestmentsType investments,
-                const garnet::CipherAES& aes_pwd,
+                const garnet::CipherAES_string& aes_pwd,
                 TradeAssistantSetting& script_mng)
     {
         // æˆøŠí•Ê‚ª•Ï‚í‚Á‚½‚ç¡‚ ‚é–½—ßƒŠƒXƒgetc‚ğ”jŠü
@@ -1035,7 +1035,7 @@ void StockOrderingManager::UpdateExecInfo(const std::vector<StockExecInfoAtOrder
 void StockOrderingManager::Update(int64_t tickCount,
                                   const garnet::HHMMSS& hhmmss,
                                   eStockInvestmentsType investments,
-                                  const garnet::CipherAES& aes_pwd,
+                                  const garnet::CipherAES_string& aes_pwd,
                                   TradeAssistantSetting& script_mng)
 {
     m_pImpl->Update(tickCount, hhmmss, investments, aes_pwd, script_mng);

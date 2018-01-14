@@ -7,13 +7,14 @@
 #pragma once
 
 #include "stock_trading_starter.h"
-#include <memory>
+#include "securities_session_fwd.h"
 
-namespace garnet { class TwitterSessionForAuthor; }
+#include "twitter/twitter_session_fwd.h"
+
+#include <memory>
 
 namespace trading
 {
-class SecuritiesSession;
 class TradeAssistantSetting;
 
 class StockTradingStarterSbi : public StockTradingStarter
@@ -24,8 +25,8 @@ public:
      *  @param  tw_session  twitterとのセッション
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
-    StockTradingStarterSbi(const std::shared_ptr<SecuritiesSession>& sec_session,
-                           const std::shared_ptr<garnet::TwitterSessionForAuthor>& tw_session,
+    StockTradingStarterSbi(const SecuritiesSessionPtr& sec_session,
+                           const garnet::TwitterSessionForAuthorPtr& tw_session,
                            const TradeAssistantSetting& script_mng);
     /*!
      */
@@ -49,8 +50,8 @@ public:
      *  @retval true                成功
      */
     bool Start(int64_t tickCount,
-               const garnet::CipherAES& aes_uid,
-               const garnet::CipherAES& aes_pwd,
+               const garnet::CipherAES_string& aes_uid,
+               const garnet::CipherAES_string& aes_pwd,
                const StockCodeContainer& monitoring_code,
                eStockInvestmentsType investments_type,
                const InitMonitoringBrandFunc& init_func,

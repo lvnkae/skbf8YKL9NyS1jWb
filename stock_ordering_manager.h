@@ -9,14 +9,14 @@
 #include "trade_container.h"
 #include "trade_define.h"
 
-#include "twitter_session_fwd.h"
+#include "twitter/twitter_session_fwd.h"
 
 #include <memory>
 #include <vector>
 
 namespace garnet
 {
-class CipherAES;
+class CipherAES_string;
 struct HHMMSS;
 } // namespace garnet
 
@@ -93,13 +93,13 @@ public:
     void Update(int64_t tickCount,
                 const garnet::HHMMSS& hhmmss,
                 eStockInvestmentsType investments,
-                const garnet::CipherAES& aes_pwd,
+                const garnet::CipherAES_string& aes_pwd,
                 TradeAssistantSetting& script_mng);
 
 private:
     StockOrderingManager();
     StockOrderingManager(const StockOrderingManager&);
-    StockOrderingManager(const StockOrderingManager&&);
+    StockOrderingManager(StockOrderingManager&&);
     StockOrderingManager& operator= (const StockOrderingManager&);
 
     class PIMPL;

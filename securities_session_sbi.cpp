@@ -13,13 +13,13 @@
 #include "trade_utility.h"
 
 #include "http_cookies.h"
-#include "utility_datetime.h"
-#include "utility_debug.h"
-#include "utility_http.h"
-#include "utility_python.h"
-#include "utility_string.h"
-#include "yymmdd.h"
 #include "garnet_time.h"
+#include "yymmdd.h"
+#include "utility/utility_datetime.h"
+#include "utility/utility_debug.h"
+#include "utility/utility_http.h"
+#include "utility/utility_python.h"
+#include "utility/utility_string.h"
 
 #include "cpprest/http_client.h"
 #include "cpprest/filestream.h"
@@ -166,7 +166,7 @@ public:
      */
     PIMPL(const TradeAssistantSetting& script_mng)
     /* html解析用のpythonブジェクト生成 */
-    : m_python(std::move(utility_python::PreparePythonScript(Environment::GetPythonHome(), "html_parser_sbi.py")))
+    : m_python(std::move(utility_python::PreparePythonScript(Environment::GetPythonConfig(), "html_parser_sbi.py")))
     , m_cookies_gr()
     , m_last_access_tick_mb(0)
     , m_last_access_tick_pc(0)

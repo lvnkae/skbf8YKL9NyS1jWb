@@ -11,7 +11,7 @@
 #include <functional>
 #include <vector>
 
-namespace garnet { class CipherAES; }
+namespace garnet { class CipherAES_string; }
 
 namespace trading
 {
@@ -42,8 +42,8 @@ public:
      *  @retval true                ê¨å˜
      */
     virtual bool Start(int64_t tickCount,
-                       const garnet::CipherAES& aes_uid,
-                       const garnet::CipherAES& aes_pwd,
+                       const garnet::CipherAES_string& aes_uid,
+                       const garnet::CipherAES_string& aes_pwd,
                        const StockCodeContainer& monitoring_code,
                        eStockInvestmentsType investments_type,
                        const InitMonitoringBrandFunc& init_func,
@@ -51,6 +51,7 @@ public:
 
 private:
     StockTradingStarter(const StockTradingStarter&);
+    StockTradingStarter(StockTradingStarter&&);
     StockTradingStarter& operator= (const StockTradingStarter&);
 };
 

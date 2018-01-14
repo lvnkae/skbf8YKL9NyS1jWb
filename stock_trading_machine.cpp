@@ -10,13 +10,13 @@
 #include "stock_trading_starter_sbi.h"
 #include "trade_assistant_setting.h"
 #include "trade_struct.h"
+#include "update_message.h"
 
 #include "cipher_aes.h"
 #include "holiday_investigator.h"
 #include "random_generator.h"
-#include "update_message.h"
-#include "twitter_session.h"
-#include "utility_datetime.h"
+#include "twitter/twitter_session.h"
+#include "utility/utility_datetime.h"
 #include "yymmdd.h"
 #include "garnet_time.h"
 
@@ -43,7 +43,7 @@ private:
     eSequence m_sequence;   //!< シーケンス
 
     eSecuritiesType m_securities;                                   //!< 証券会社種別
-    std::shared_ptr<SecuritiesSession> m_pSecSession;               //!< 証券会社とのセッション
+    SecuritiesSessionPtr m_pSecSession;               //!< 証券会社とのセッション
     garnet::TwitterSessionForAuthorPtr m_pTwSession;                //!< twitterとのセッション(メッセージ通知用)
     std::unique_ptr<StockTradingStarter> m_pStarter;                //!< 株取引スターター
     std::unique_ptr<StockOrderingManager> m_pOrderingManager;       //!< 発注管理者
@@ -54,10 +54,10 @@ private:
     //!< 株取引タイムテーブル
     std::vector<StockTimeTableUnit> m_timetable;
 
-    garnet::RandomGenerator m_rand_gen; //!< 乱数生成器
-    garnet::CipherAES m_aes_uid;        //!< 暗号uid
-    garnet::CipherAES m_aes_pwd;        //!< 暗号pwd
-    garnet::CipherAES m_aes_pwd_sub;    //!< 暗号pwd_sub
+    garnet::RandomGenerator m_rand_gen;     //!< 乱数生成器
+    garnet::CipherAES_string m_aes_uid;     //!< 暗号uid
+    garnet::CipherAES_string m_aes_pwd;     //!< 暗号pwd
+    garnet::CipherAES_string m_aes_pwd_sub; //!< 暗号pwd_sub
 
     int64_t m_tickcount;                        //!< 前回操作時のtickCount
     garnet::sTime m_last_sv_time;               //!< 最後にサーバ(証券会社および休日判定)から得た時刻
@@ -136,11 +136,11 @@ private:
             m_last_sv_time_tick = utility_datetime::GetTickCountGeneral();
             if (ACCEPTABLE_DIFF_SECONDS >= utility_datetime::GetDiffSecondsFromLocalMachineTime(m_last_sv_time)) {
                 
-                //m_last_sv_time.tm_hour = 9;//
-                //m_last_sv_time.tm_min = 19;//
-                //m_last_sv_time.tm_sec = 25;//
-                //m_last_sv_time.tm_wday = 1;
-                //is_holiday = false;
+                m_last_sv_time.tm_hour = 9;//
+                m_last_sv_time.tm_min = 19;//
+                m_last_sv_time.tm_sec = 25;//
+                m_last_sv_time.tm_wday = 1;
+                is_holiday = false;
 
                 // 土日なら週明けに再調査(成否に関係なく)
                 m_after_wait_seq = SEQ_CLOSED_CHECK;

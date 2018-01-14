@@ -6,10 +6,11 @@
  */
 #include "trade_assistor.h"
 
+#include "environment.h"
 #include "stock_trading_machine.h"
 #include "trade_assistant_setting.h"
 
-#include "twitter_session.h"
+#include "twitter/twitter_session.h"
 
 namespace trading
 {
@@ -65,7 +66,7 @@ public:
     : m_sequence(SEQ_NONE)
     , m_setting()
     , m_pMachine()
-    , m_pTwitterSession(new garnet::TwitterSessionForAuthor())
+    , m_pTwitterSession(new garnet::TwitterSessionForAuthor(Environment::GetTwitterConfig()))
     {
     }
 

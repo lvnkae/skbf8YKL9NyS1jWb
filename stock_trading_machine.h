@@ -8,7 +8,7 @@
 #include "trade_define.h"
 #include "trading_machine.h"
 
-#include "twitter_session_fwd.h"
+#include "twitter/twitter_session_fwd.h"
 
 #include <memory>
 

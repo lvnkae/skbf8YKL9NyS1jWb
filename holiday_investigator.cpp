@@ -7,9 +7,9 @@
 
 #include "environment.h"
 
-#include "utility_debug.h"
-#include "utility_http.h"
-#include "utility_python.h"
+#include "utility/utility_debug.h"
+#include "utility/utility_http.h"
+#include "utility/utility_python.h"
 
 #include "cpprest/http_client.h"
 #include "cpprest/filestream.h"
@@ -29,7 +29,7 @@ private:
 public:
     PIMPL()
     /* html解析用のpythonブジェクト生成 */
-    : m_python(std::move(garnet::utility_python::PreparePythonScript(Environment::GetPythonHome(), "holiday_investigator.py")))
+    : m_python(std::move(garnet::utility_python::PreparePythonScript(Environment::GetPythonConfig(), "holiday_investigator.py")))
     , m_callback()
     {
     }
