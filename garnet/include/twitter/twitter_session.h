@@ -6,6 +6,8 @@
  */
 #pragma once
 
+#include "twitter_config_fwd.h"
+
 #include <string>
 #include <memory>
 
@@ -25,12 +27,26 @@ const std::wstring GetNewlineString();
 /*!
  *  @brief  AccessToken/Secretが判明しているauthor専用セッション
  *  @note   ユーザにブラウザ認証を促しtokenを取得するシーケンスは含まれない
- *  @note   tokenは設定ファイル(twitter_session.ini)から取得
  */
 class TwitterSessionForAuthor
 {
 public:
-    TwitterSessionForAuthor();
+    /*!
+     *  @param  config  twitter設定
+     */
+    TwitterSessionForAuthor(const twitter_config_ref& config);
+    /*!
+     *  @param  consumer_key
+     *  @param  consumer_secret
+     *  @param  access_token
+     *  @param  access_token_secret
+     *  @param  max_tweet_letters   最大ツイート文字数
+     */
+    TwitterSessionForAuthor(const std::wstring& consumer_key,
+                            const std::wstring& consumer_secret,
+                            const std::wstring& access_token,
+                            const std::wstring& access_token_secret,
+                            size_t max_tweet_letters);
     ~TwitterSessionForAuthor();
 
     /*!
@@ -45,7 +61,9 @@ public:
     bool Tweet(const std::wstring& src);
 
 private:
+    TwitterSessionForAuthor();
     TwitterSessionForAuthor(const TwitterSessionForAuthor&);
+    TwitterSessionForAuthor(TwitterSessionForAuthor&&);
     TwitterSessionForAuthor& operator= (const TwitterSessionForAuthor&);
 
     class PIMPL;

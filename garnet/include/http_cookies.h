@@ -2,7 +2,7 @@
  *  @file   http_cookies.h
  *  @brief  [common]cookie
  *  @date   2017/12/25
- *  @note   C++REST ‚ÉˆË‘¶(namespace‚à€‹’‚·‚é)
+ *  @note   cpprestsdk ‚ÉˆË‘¶(namespace‚à€‹’‚·‚é)
  */
 #pragma once
 

@@ -5,12 +5,10 @@
  */
 #include "twitter_session.h"
 
+#include "twitter_config.h"
 #include "utility_datetime.h"
 #include "utility_http.h"
 
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/ini_parser.hpp"
-#include "boost/optional.hpp"
 #include "cpprest/http_client.h"
 #include "cpprest/oauth1.h"
 #include <codecvt>
@@ -99,38 +97,51 @@ public:
 };
 
 /*!
+ *  @param  config  twitter設定
  */
-TwitterSessionForAuthor::TwitterSessionForAuthor()
+TwitterSessionForAuthor::TwitterSessionForAuthor(const twitter_config_ref& config)
 : m_pImpl()
 {
-    const std::string inifile("twitter_session.ini");
-    bool b_exist = false;
-    {
-        std::ifstream ifs(inifile);
-        b_exist = ifs.is_open();
-    }
-    if (b_exist) {
-        boost::property_tree::ptree pt;
-        boost::property_tree::read_ini(inifile, pt);
-        boost::optional<std::string> consumer_key = pt.get_optional<std::string>("OAuth.ConsumerKey");
-        boost::optional<std::string> consumer_secret = pt.get_optional<std::string>("OAuth.ConsumerSecret");
-        boost::optional<std::string> access_token = pt.get_optional<std::string>("OAuth.AccessToken");
-        boost::optional<std::string> access_token_secret = pt.get_optional<std::string>("OAuth.AccessTokenSecret");
-        boost::optional<int32_t> max_letters = pt.get_optional<int32_t>("Setting.MaxTweetLetters");
+    const twitter_config_ptr p = config.lock();
+    if (nullptr != p) {
+        const twitter_config& tw_conf(*p);
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utfconv;
-        m_pImpl.reset(new PIMPL(std::move(utfconv.from_bytes(consumer_key.get())),
-                                std::move(utfconv.from_bytes(consumer_secret.get())),
-                                std::move(utfconv.from_bytes(access_token.get())),
-                                std::move(utfconv.from_bytes(access_token_secret.get())),
-                                max_letters.get()));
+        m_pImpl.reset(new PIMPL(std::move(utfconv.from_bytes(tw_conf.GetConsumerKey())),
+                                std::move(utfconv.from_bytes(tw_conf.GetConsumerSecret())),
+                                std::move(utfconv.from_bytes(tw_conf.GetAccessToken())),
+                                std::move(utfconv.from_bytes(tw_conf.GetAccessTokenSecret())),
+                                tw_conf.GetMaxTweetLetters()));
     } else {
-        m_pImpl.reset(new PIMPL(std::wstring(), std::wstring(), std::wstring(), std::wstring(), 0));
+        m_pImpl.reset(new PIMPL(std::wstring(),
+                                std::wstring(),
+                                std::wstring(),
+                                std::wstring(),
+                                0));
     }
+}
+/*!
+ *  @param  consumer_key
+ *  @param  consumer_secret
+ *  @param  access_token
+ *  @param  access_token_secret
+ *  @param  max_tweet_letters   最大ツイート文字数
+ */
+TwitterSessionForAuthor::TwitterSessionForAuthor(const std::wstring& consumer_key,
+                                                 const std::wstring& consumer_secret,
+                                                 const std::wstring& access_token,
+                                                 const std::wstring& access_token_secret,
+                                                 size_t max_tweet_letters)
+: m_pImpl(new PIMPL(consumer_key,
+                    consumer_secret,
+                    access_token,
+                    access_token_secret,
+                    max_tweet_letters))
+{   
 }
 /*!
  */
 TwitterSessionForAuthor::~TwitterSessionForAuthor()
-{
+{    
 }
 
 /*!

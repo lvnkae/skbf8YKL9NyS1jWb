@@ -16,7 +16,7 @@
 namespace garnet
 {
 
-class CipherAES::PIMPL
+class CipherAES_string::PIMPL
 {
 private:
     std::string m_key;  //! ˆÃ†Œ®
@@ -96,7 +96,7 @@ public:
 /*!
  *  @brief
  */
-CipherAES::CipherAES()
+CipherAES_string::CipherAES_string()
 : m_pImpl(new PIMPL())
 {
 }
@@ -104,7 +104,7 @@ CipherAES::CipherAES()
 /*!
  *  @brief
  */
-CipherAES::~CipherAES()
+CipherAES_string::~CipherAES_string()
 {
 }
 
@@ -113,7 +113,7 @@ CipherAES::~CipherAES()
  *  @param  rnd_gen —”¶¬Ší
  *  @param  src     ˆÃ†‰»‚·‚é•¶Žš—ñ
  */
-bool CipherAES::Encrypt(RandomGenerator& rnd_gen, const std::string& src)
+bool CipherAES_string::Encrypt(RandomGenerator& rnd_gen, const std::string& src)
 {
     return m_pImpl->Encrypt(rnd_gen, src);
 }
@@ -121,7 +121,7 @@ bool CipherAES::Encrypt(RandomGenerator& rnd_gen, const std::string& src)
  *  @brief  •¶Žš—ñ‚ð•œ†‚·‚é
  *  @param[out] dst     •œ†‚µ‚½•¶Žš—ñ‚ÌŠi”[æ
  */
-bool CipherAES::Decrypt(std::string& dst) const
+bool CipherAES_string::Decrypt(std::string& dst) const
 {
     return m_pImpl->Decrypt(dst);
 }
@@ -129,7 +129,7 @@ bool CipherAES::Decrypt(std::string& dst) const
  *  @brief  •¶Žš—ñ‚ð•œ†‚·‚é(wstring”Å)
  *  @param[out] dst     •œ†‚µ‚½•¶Žš—ñ‚ÌŠi”[æ
  */
-bool CipherAES::Decrypt(std::wstring& dst) const
+bool CipherAES_string::Decrypt(std::wstring& dst) const
 {
     std::string str_work;
     bool result = m_pImpl->Decrypt(str_work);

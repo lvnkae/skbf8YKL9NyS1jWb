@@ -15,39 +15,43 @@ namespace garnet
 class RandomGenerator;
 
 /*!
- *  @note   ・使い捨てなので1クラスで1回しか暗号化できない(復号は何度でもOK)
- *  @note   ・暗号鍵とivは中で勝手に作る
+ *  @brief  文字列をAESで暗号化して保持するクラス
+ *  @note   1文字列につき1インスタンス
+ *  @note    暗号化は1インスタンスで1回だけ
+ *  @note    復号(元の文字列取り出し)は何度でもOK
+ *  @note   暗号鍵とivは中で勝手に作る(参照不可)
  */
-class CipherAES
+class CipherAES_string
 {
 public:
-    CipherAES();
-    ~CipherAES();
+    CipherAES_string();
+    ~CipherAES_string();
 
     /*!
      *  @brief  文字列を暗号化する
      *  @param  rnd_gen 乱数生成器
-     *  @param  src     暗号化する文字列
+     *  @param  src     暗号化する文字列(utf-8)
      *  @retval true    成功
      */
     bool Encrypt(RandomGenerator& rnd_gen, const std::string& src);
     /*!
      *  @brief  文字列を復号する
-     *  @param[out] dst     復号した文字列の格納先
+     *  @param[out] dst     復号した文字列の格納先(utf-8)
      *  @retval     true    成功
      */
     bool Decrypt(std::string& dst) const;
     /*!
      *  @brief  文字列を復号する(wstring版)
-     *  @param[out] dst     復号した文字列の格納先
+     *  @param[out] dst     復号した文字列の格納先(utf-16)
      *  @retval     true    成功
      */
     bool Decrypt(std::wstring& dst) const;
 
 
 private:
-    CipherAES(const CipherAES&);
-    CipherAES& operator= (const CipherAES&);
+    CipherAES_string(const CipherAES_string&);
+    CipherAES_string(CipherAES_string&&);
+    CipherAES_string& operator= (const CipherAES_string&);
 
     class PIMPL;
     std::unique_ptr<PIMPL> m_pImpl;

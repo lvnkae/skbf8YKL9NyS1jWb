@@ -22,7 +22,7 @@ const int32_t DAYS_OF_1WEEK = 7;                // ˆêTŠÔ=7“ú
 const int32_t HOURS_OF_1DAY = 24;               // 1“ú=24ŽžŠÔ
 const int32_t MINUTES_OF_1HOUR = 60;            // 1ŽžŠÔ=60•ª
 const int32_t SECONDS_OF_1MINUTE = 60;          // 1•ª=60•b
-const int64_t MILISECONDS_OF_1SECOND = 1000;    // 1•b=100ƒ~ƒŠ•b
+const int64_t MILISECONDS_OF_1SECOND = 1000;    // 1•b=1000ƒ~ƒŠ•b
 
 // 1ŽžŠÔ‚Ì•b”
 const int32_t SECONDS_OF_1HOUR = MINUTES_OF_1HOUR*SECONDS_OF_1MINUTE;

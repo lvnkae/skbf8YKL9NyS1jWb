@@ -5,6 +5,7 @@
  */
 #include "utility_python.h"
 
+#include "python_config.h"
 #include "utility_debug.h"
 #include <fstream>
 
@@ -12,6 +13,21 @@ namespace garnet
 {
 namespace utility_python
 {
+
+/*!
+ *  @brief  pythonのスクリプトを使えるようにする
+ *  @param  python_home     python設定
+ *  @param  python_script   pythonのスクリプトファイル名
+ */
+boost::python::api::object PreparePythonScript(const python_config_ref& config, const std::string& python_script)
+{
+    const python_config_ptr p = config.lock();
+    if (nullptr == p) {
+        return boost::python::api::object();
+    }
+    return PreparePythonScript(p->GetPythonHome(),
+                               p->GetPythonScriptPath() + python_script);
+}
 
 /*!
  *  @brief  pythonのスクリプトを使えるようにする
