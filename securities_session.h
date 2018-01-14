@@ -30,6 +30,7 @@ public:
     typedef std::function<void (bool b_result, const SpotTradingsStockContainer&, const StockPositionContainer&)> GetStockOwnedCallback;
     typedef std::function<void (bool b_result, const std::wstring&, const std::vector<RcvStockValueData>&)> UpdateValueDataCallback;
     typedef std::function<void (bool b_result, const std::vector<StockExecInfoAtOrder>&)> UpdateStockExecInfoCallback;
+    typedef std::function<void (bool b_result)> UpdateMarginCallback;
     typedef std::function<void (bool b_result, const RcvResponseStockOrder&, const std::wstring&)> OrderCallback;
 
     /*!
@@ -73,6 +74,10 @@ public:
      *  @brief  –ñ’èî•ñæ“¾æ“¾
      */
     virtual void UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback) = 0;
+    /*!
+     *  @brief  —]—Íæ“¾
+     */
+    virtual void UpdateMargin(const UpdateMarginCallback& callback) = 0;
 
     /*!
      *  @brief  ”„”ƒ’•¶

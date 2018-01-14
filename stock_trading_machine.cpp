@@ -67,9 +67,11 @@ private:
     StockTimeTableUnit::eMode m_prev_tt_mode;   //!< 前回Update時のTimeTableモード
     int64_t m_last_monitoring_tick;             //!< 最後に監視銘柄情報(価格データ)を要求したtickCount
     int64_t m_last_req_exec_info_tick;          //!< 最後に当日約定情報を要求したtickCount
+    bool m_lock_update_margin;                  //!< 余力更新ロックフラグ
 
     const int64_t m_monitoring_interval_ms;     //!< 監視銘柄情報(価格データ)更新間隔[ミリ秒]
     const int64_t m_exec_info_interval_ms;      //!< 当日約定情報更新間隔[ミリ秒]
+    const int64_t m_margin_interval_ms;         //!< 余力更新間隔[ミリ秒]
 
 private:
     PIMPL();
@@ -136,11 +138,11 @@ private:
             m_last_sv_time_tick = utility_datetime::GetTickCountGeneral();
             if (ACCEPTABLE_DIFF_SECONDS >= utility_datetime::GetDiffSecondsFromLocalMachineTime(m_last_sv_time)) {
                 
-                m_last_sv_time.tm_hour = 9;//
-                m_last_sv_time.tm_min = 19;//
-                m_last_sv_time.tm_sec = 25;//
-                m_last_sv_time.tm_wday = 1;
-                is_holiday = false;
+                //m_last_sv_time.tm_hour = 9;//
+                //m_last_sv_time.tm_min = 19;//
+                //m_last_sv_time.tm_sec = 25;//
+                //m_last_sv_time.tm_wday = 1;
+                //is_holiday = false;
 
                 // 土日なら週明けに再調査(成否に関係なく)
                 m_after_wait_seq = SEQ_CLOSED_CHECK;
@@ -294,6 +296,19 @@ private:
                         }
                     });
                 }
+                // 余力更新(セッション維持目的)
+                if (!m_lock_update_margin) {
+                    if ((tickCount - m_pSecSession->GetLastAccessTime()) > m_margin_interval_ms) {
+                        m_lock_update_margin = true;
+                        m_pSecSession->UpdateMargin([this](bool b_result) {
+                            if (b_result) {
+                                m_lock_update_margin = false;
+                            } else {
+                                m_pTwSession->Tweet(std::wstring(), L"証券サイトとの接続が切れました");
+                            }
+                        });
+                    }
+                }
                 // 発注管理定期更新
                 m_pOrderingManager->Update(tickCount, now_tm, investments_type, m_aes_pwd_sub, script_mng);
             }
@@ -363,12 +378,17 @@ public:
     , m_after_wait_seq(SEQ_ERROR)
     , m_prev_tt_mode(StockTimeTableUnit::CLOSED)
     , m_last_monitoring_tick(0)
+    , m_last_req_exec_info_tick(0)
+    , m_lock_update_margin(false)
     , m_monitoring_interval_ms(
         garnet::utility_datetime::ToMiliSecondsFromSecond(
             script_mng.GetStockMonitoringIntervalSecond()))
     , m_exec_info_interval_ms(
         garnet::utility_datetime::ToMiliSecondsFromSecond(
             script_mng.GetStockExecInfoIntervalSecond()))
+    , m_margin_interval_ms(
+        garnet::utility_datetime::ToMiliSecondsFromMinute(
+            script_mng.GetSessionKeepMinute())/2) // セッション維持目的なのでセッションタイムの半分くらいで
     {
         memset(reinterpret_cast<void*>(&m_last_sv_time), 0, sizeof(m_last_sv_time));
     }

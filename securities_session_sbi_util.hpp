@@ -23,6 +23,8 @@ const wchar_t URL_BK_LOGIN[] = L"https://k.sbisec.co.jp/bsite/visitor/loginUserC
 const wchar_t URL_BK_BASE[] = L"https://k.sbisec.co.jp/bsite/member/";
 //! URL:SBI(mobile):トップページ
 const wchar_t URL_BK_TOP[] = L"menu.do";
+//! URL:SBI(mobile):余力
+const wchar_t URL_BK_POSITIONMARGIN[] = L"acc/positionMargin.do";
 //! URL:SBI(mobile):ポートフォリオ登録確認
 const wchar_t URL_BK_STOCKENTRYCONFIRM[] = L"portfolio/lumpStockEntryConfirm.do";
 //! URL:SBI(mobile):ポートフォリオ登録実行

@@ -863,6 +863,40 @@ def getTodayExecInfo(html_sjis):
     parser.close()
     
     return (parser.b_result, parser.exec_info)
+    
+
+#   @brief  余力を切り出すclass
+#   @note   SBI-mobile[バックアップ]サイト<汎用>
+class MarginMobileParser(HTMLParser):
+ 
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.b_result = False
+        self.tag_now = ''
+        self.b_start = False
+ 
+    def handle_starttag(self, tag, attrs):
+        if not self.b_result:
+            self.tag_now = tag
+            self.b_start = True
+        
+    def handle_data(self, data):
+        if not self.b_result:
+            if self.b_start:
+                if self.tag_now == 'title':
+                    if u'信用建余力' in data.decode('utf-8'):
+                        self.b_result = True
+
+#   @brief  余力を切り出す(SBI-mobile[バックアップ]サイト用)
+#   @param  html_u8 余力画面のresponse(html/utf-8)
+#   @return result
+def getMarginMobile(html_u8):
+
+    parser = MarginMobileParser()
+    parser.feed(html_u8)
+    parser.close()
+    
+    return parser.b_result
 
 
 #   @brief  regist_idを切り出すclass

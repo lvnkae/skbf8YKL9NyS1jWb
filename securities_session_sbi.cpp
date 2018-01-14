@@ -571,6 +571,42 @@ public:
     }
 
     /*!
+     *  @brief  余力取得
+     */
+    void UpdateMargin(const UpdateMarginCallback& callback)
+    {
+        const std::wstring url(
+            std::move(std::wstring(URL_BK_BASE) + URL_BK_POSITIONMARGIN));
+        web::http::http_request request(web::http::methods::GET);
+        utility_http::SetHttpCommonHeaderKeepAlive(url, m_cookies_gr, URL_BK_BASE, request);
+        //
+        web::http::client::http_client http_client(url);
+        http_client.request(request).then([this, url, callback](web::http::http_response response)
+        {
+            const int64_t rcv_tick = utility_datetime::GetTickCountGeneral();
+            m_cookies_gr.Set(response.headers(), url);
+            concurrency::streams::istream bodyStream = response.body();
+            concurrency::streams::container_buffer<std::string> inStringBuffer;
+            return bodyStream.read_to_delim(inStringBuffer, 0).then([this,
+                                                                     inStringBuffer, rcv_tick,
+                                                                     callback](size_t bytesRead)
+            {
+                // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
+                std::lock_guard<std::recursive_mutex> lock(m_mtx);
+
+                const std::string& html_u8 = inStringBuffer.collection();
+                const bool b_result =
+                    boost::python::extract<bool>(m_python.attr("getMarginMobile")(html_u8));
+                if (b_result) {
+                    // 成功したら最終アクセス時刻更新
+                    m_last_access_tick_mb = rcv_tick;
+                }
+                callback(b_result);
+            });
+        });
+    }
+
+    /*!
      *  @brief  株売買注文
      *  @param  order       注文情報
      *  @param  pwd
@@ -932,6 +968,13 @@ void SecuritiesSessionSbi::UpdateValueData(const UpdateValueDataCallback& callba
 void SecuritiesSessionSbi::UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback)
 {
     m_pImpl->UpdateExecuteInfo(callback);
+}
+/*!
+ *  @brief  余力取得
+ */
+void SecuritiesSessionSbi::UpdateMargin(const UpdateMarginCallback& callback)
+{
+    m_pImpl->UpdateMargin(callback);
 }
 
 /*!

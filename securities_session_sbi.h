@@ -58,6 +58,10 @@ public:
      *  @brief  –ñ’èî•ñæ“¾æ“¾
      */
     void UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback) override;
+    /*!
+     *  @brief  —]—Íæ“¾
+     */
+    void UpdateMargin(const UpdateMarginCallback& callback) override;
 
     /*!
      *  @brief  ”„”ƒ’•¶
