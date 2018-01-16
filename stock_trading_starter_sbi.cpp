@@ -52,6 +52,7 @@ private:
             }
             // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
         });
+        m_sequence = SEQ_BUSY;
      }
     /*!
      *  @brief  監視銘柄コード登録

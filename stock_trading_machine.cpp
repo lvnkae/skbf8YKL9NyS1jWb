@@ -301,6 +301,9 @@ private:
                     if ((tickCount - m_pSecSession->GetLastAccessTime()) > m_margin_interval_ms) {
                         m_lock_update_margin = true;
                         m_pSecSession->UpdateMargin([this](bool b_result) {
+                            // http関連スレッドから呼ばれるのでlock
+                            std::lock_guard<std::mutex> lock(m_mtx);
+                            //
                             if (b_result) {
                                 m_lock_update_margin = false;
                             } else {
