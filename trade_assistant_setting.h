@@ -67,6 +67,10 @@ public:
      */
     int32_t GetMaxMonitoringCodeRegister() const;
     /*!
+     *  @brief  監視銘柄情報出力ディレクトリ取得
+     */
+    std::string GetStockMonitoringLogDir() const;
+    /*!
      *  @brief  銘柄監視に使用するポートフォリオ番号取得
      */
     int32_t GetUsePortfolioNumberForMonitoring() const;

@@ -25,13 +25,23 @@ struct RcvResponseStockOrder;
 class SecuritiesSession
 {
 public:
-    typedef std::function<void (bool b_result, bool, bool, const std::wstring&)> LoginCallback;
-    typedef std::function<void (bool b_result, const StockBrandContainer&)> RegisterMonitoringCodeCallback;
-    typedef std::function<void (bool b_result, const SpotTradingsStockContainer&, const StockPositionContainer&)> GetStockOwnedCallback;
-    typedef std::function<void (bool b_result, const std::wstring&, const std::vector<RcvStockValueData>&)> UpdateValueDataCallback;
-    typedef std::function<void (bool b_result, const std::vector<StockExecInfoAtOrder>&)> UpdateStockExecInfoCallback;
+    typedef std::function<void (bool b_result, bool, bool,
+                                const std::wstring& sv_date)> LoginCallback;
+    typedef std::function<void (bool b_result,
+                                const StockBrandContainer&)> RegisterMonitoringCodeCallback;
+    typedef std::function<void (bool b_result,
+                                const SpotTradingsStockContainer&,
+                                const StockPositionContainer&,
+                                const std::wstring& sv_date)> GetStockOwnedCallback;
+    typedef std::function<void (bool b_result,
+                                const std::vector<RcvStockValueData>&,
+                                const std::wstring& sv_date)> UpdateValueDataCallback;
+    typedef std::function<void (bool b_result,
+                                const std::vector<StockExecInfoAtOrder>&)> UpdateStockExecInfoCallback;
     typedef std::function<void (bool b_result)> UpdateMarginCallback;
-    typedef std::function<void (bool b_result, const RcvResponseStockOrder&, const std::wstring&)> OrderCallback;
+    typedef std::function<void (bool b_result,
+                                const RcvResponseStockOrder&,
+                                const std::wstring& sv_date)> OrderCallback;
 
     /*!
      *  @brief

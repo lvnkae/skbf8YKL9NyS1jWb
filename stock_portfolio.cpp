@@ -8,6 +8,9 @@
 #include "trade_utility.h"
 
 #include "garnet_time.h"
+#include "utility/utility_string.h"
+
+#include <fstream>
 
 namespace trading
 {
@@ -35,5 +38,32 @@ void StockValueData::UpdateValueData(const RcvStockValueData& src, const garnet:
     }
     m_value_data.emplace_back(date, src.m_value, src.m_volume);
 };
+
+/*!
+ *  @brief  ログ出力
+ *  @param  filename    出力ファイル名(パス含む)
+ */
+void StockValueData::OutputLog(const std::string& filename) const
+{
+    std::ofstream outputfile(filename.c_str());
+
+    using garnet::utility_string::ToStringOrder;
+    const int32_t VORDER = trade_utility::ValueOrder();
+
+    outputfile << std::to_string(m_code.GetCode()).c_str() << ",";
+    outputfile << ToStringOrder(m_open ,  VORDER).c_str() << ",";
+    outputfile << ToStringOrder(m_high ,  VORDER).c_str() << ",";
+    outputfile << ToStringOrder(m_low  ,  VORDER).c_str() << ",";
+    outputfile << ToStringOrder(m_close,  VORDER).c_str() << std::endl;
+
+    for (const auto& vu: m_value_data) {
+        outputfile << vu.m_hhmmss.to_delim_string().c_str() << ",";
+        outputfile << ToStringOrder(vu.m_value, VORDER).c_str() << ",";
+        outputfile << vu.m_volume << std::endl;
+    }
+
+    outputfile.close();
+}
+
 
 } // namespace trading

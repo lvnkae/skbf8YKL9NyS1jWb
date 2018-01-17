@@ -54,11 +54,13 @@ void StockTradingTactics::AddRepaymentOrder(const RepOrder& order)
 
 /*!
  *  @brief  判定
- *  @param  hhmmss      現在時分秒
+ *  @param  now_time    現在時分秒
+ *  @param  sec_time    現セクション開始時刻
  *  @param  valuedata   価格データ(1銘柄分)
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
-bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& hhmmss,
+bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& now_time,
+                                         const garnet::HHMMSS& sec_time,
                                          const StockValueData& valuedata,
                                          TradeAssistantSetting& script_mng) const
 {
@@ -80,7 +82,7 @@ bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& hhmmss,
             float64 v_open = 0.f;   // 期間始値
             // 指定期間[現在,指定秒前]の始値/高値/安値を得る
             {
-                const int32_t pastsec = hhmmss.GetPastSecond();
+                const int32_t pastsec = now_time.GetPastSecond();
                 const int32_t rangesec = m_signed_param;
                 const size_t presz = valuedata.m_value_data.size();
                 //auto rit_end = valuedata.m_value_data.rend();
@@ -113,9 +115,11 @@ bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& hhmmss,
 
     case NO_CONTRACT:
         {
-            const int32_t pastsec = hhmmss.GetPastSecond();
+            const int32_t pastsec = now_time.GetPastSecond();
+            const int32_t sectsec = sec_time.GetPastSecond();
             const int32_t latestsec = valuedata.m_value_data.back().m_hhmmss.GetPastSecond();
-            return (pastsec - latestsec) >= m_signed_param;
+            const int32_t diffsec = pastsec - std::max(sectsec, latestsec);
+            return diffsec >= m_signed_param;
         }
         break;
 
@@ -140,14 +144,16 @@ bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& hhmmss,
 /*!
  *  @brief  戦略解釈
  *  @param  investments     現在取引所種別
- *  @param  hhmmss          現在時分秒
+ *  @param  now_time        現在時分秒
+ *  @param  sec_time        現セクション開始時刻
  *  @param  em_group        緊急モード対象グループ<戦略グループID>
  *  @param  valuedata       価格データ(1銘柄分)
  *  @param  script_mng      外部設定(スクリプト)管理者
  *  @param  enqueue_func    命令をキューに入れる関数
  */
 void StockTradingTactics::Interpret(eStockInvestmentsType investments,
-                                    const garnet::HHMMSS& hhmmss,
+                                    const garnet::HHMMSS& now_time,
+                                    const garnet::HHMMSS& sec_time,
                                     const std::unordered_set<int32_t>& em_group,
                                     const StockValueData& valuedata,
                                     TradeAssistantSetting& script_mng,
@@ -158,7 +164,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
 
     // 緊急モード判定
     for (const auto& emg: m_emergency) {
-        if (!emg.Judge(hhmmss, valuedata, script_mng)) {
+        if (!emg.Judge(now_time, sec_time, valuedata, script_mng)) {
             continue;
         }
         std::shared_ptr<StockTradingCommand> command_ptr(
@@ -175,7 +181,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
         if (b_pts && order.GetIsLeverage()) {
             continue; // PTS中は信用不可
         }
-        if (!order.Judge(hhmmss, valuedata, script_mng)) {
+        if (!order.Judge(now_time, sec_time, valuedata, script_mng)) {
             continue;
         }
         const auto& latest = valuedata.m_value_data.back();
@@ -207,7 +213,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
         if (b_pts && order.GetIsLeverage()) {
             continue; // PTS中は信用不可
         }
-        if (!order.Judge(hhmmss, valuedata, script_mng)) {
+        if (!order.Judge(now_time, sec_time, valuedata, script_mng)) {
             continue;
         }
         const auto& latest = valuedata.m_value_data.back();

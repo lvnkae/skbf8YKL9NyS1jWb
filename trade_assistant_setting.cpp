@@ -39,6 +39,8 @@ private:
     int32_t m_emergency_cool_second;
     //! 監視銘柄最大登録数
     int32_t m_max_code_register;
+    //! 監視銘柄情報出力ディレクトリ
+    std::string m_stock_monitoring_log_dir;
     //! 銘柄監視に使うポートフォリオ番号
     int32_t m_use_pf_number_monitoring;
     //! ポートフォリオ表示形式：監視銘柄
@@ -370,6 +372,7 @@ public:
     , m_stock_exec_info_interval_second(0)
     , m_emergency_cool_second(0)
     , m_max_code_register(0)
+    , m_stock_monitoring_log_dir()
     , m_use_pf_number_monitoring(0)
     , m_pf_indicate_monitoring(0)
     , m_pf_indicate_owned(0)
@@ -404,6 +407,10 @@ public:
      *  @brief  監視銘柄最大登録数取得
      */
     int32_t GetMaxMonitoringCodeRegister() const { return m_max_code_register; }
+    /*!
+     *  @brief  監視銘柄情報出力ディレクトリ取得
+     */
+    const std::string& GetStockMonitoringLogDir() const { return m_stock_monitoring_log_dir; }
     /*!
      *  @brief  監視銘柄を登録するポートフォリオ番号取得
      */
@@ -472,6 +479,10 @@ public:
         }
         if (!accessor.GetGlobalParam("MaxMonitoringCodeRegister", m_max_code_register)) {
             o_message.AddErrorMessage("no MaxMonitoringCodeRegister.");
+            return false;
+        }
+        if (!accessor.GetGlobalParam("StockMonitoringLogDir", m_stock_monitoring_log_dir)) {
+            o_message.AddErrorMessage("no StockMonitoringLogDir.");
             return false;
         }
         if (!accessor.GetGlobalParam("UsePortfolioNumber_Monitor", m_use_pf_number_monitoring)) {
@@ -678,6 +689,13 @@ int32_t TradeAssistantSetting::GetEmergencyCoolSecond() const
 int32_t TradeAssistantSetting::GetMaxMonitoringCodeRegister() const
 {
     return m_pImpl->GetMaxMonitoringCodeRegister();
+}
+/*!
+ *  @brief  監視銘柄情報出力ディレクトリ取得
+ */
+std::string TradeAssistantSetting::GetStockMonitoringLogDir() const
+{
+    return m_pImpl->GetStockMonitoringLogDir();
 }
 /*!
  *  @brief  監視銘柄を登録するポートフォリオ番号取得

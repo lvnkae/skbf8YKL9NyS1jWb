@@ -92,12 +92,14 @@ public:
 
         /*!
          *  @brief  判定
-         *  @param  hhmmss      現在時分秒
+         *  @param  now_time    現在時分秒
+         *  @param  sec_time    現セクション開始時刻
          *  @param  valuedata   価格データ(1銘柄分)
          *  @param  script_mng  外部設定(スクリプト)管理者
          *  @retval true        トリガー発生
          */
-        bool Judge(const garnet::HHMMSS& hhmmss,
+        bool Judge(const garnet::HHMMSS& now_time,
+                   const garnet::HHMMSS& sec_time,
                    const StockValueData& valuedata,
                    TradeAssistantSetting& script_mng) const;
     };
@@ -236,14 +238,16 @@ public:
     /*!
      *  @brief  戦略解釈
      *  @param  investments     現在取引所種別
-     *  @param  hhmmss          現在時分秒
+     *  @param  now_time        現在時分秒
+     *  @param  sec_time        現セクション開始時刻
      *  @param  em_group        緊急モード対象グループ<戦略グループID>
      *  @param  valuedata       価格データ(1銘柄分)
      *  @param  script_mng      外部設定(スクリプト)管理者
      *  @param  enqueue_func    命令をキューに入れる関数
      */
     void Interpret(eStockInvestmentsType investments,
-                   const garnet::HHMMSS& hhmmss,
+                   const garnet::HHMMSS& now_time,
+                   const garnet::HHMMSS& sec_time,
                    const std::unordered_set<int32_t>& em_group,
                    const StockValueData& valuedata,
                    TradeAssistantSetting& script_mng,

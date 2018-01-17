@@ -1083,7 +1083,10 @@ class StockOrderExParser(HTMLParser):
                                     if not u'注文後売却' in u_data_tag: #要らんやつ除外
                                         self.numbers = int(deleteComma(u_data_value.replace(u'株', '')))
                                 if u'価格' in u_data_tag:
-                                    self.value = float(deleteComma(u_data_value.replace(u'円', '')))
+                                    if u_data_value == u'成行':
+                                        self.value = float(-1.0)
+                                    else:
+                                        self.value = float(deleteComma(u_data_value.replace(u'円', '')))
                                 if u'取引' in u_data_tag:
                                     if u'信用' in u_data_value:
                                         self.b_leverage = True
@@ -1248,12 +1251,11 @@ def responseRepLeverageStockOrderTateList(html_u8):
 
 #   @brief  [Debug]Shift-JISで送られてきたhtmlをUTF8に変換してからファイル出力する
 #   @param  html_sjis   response(html/Shift-JIS)
-def debugOutputShiftJisHTMLToFile(html_sjis):
+def debugOutputShiftJisHTMLToFile(html_sjis, filename):
 
-    f = open('logintest.txt', 'w')
+    f = open(filename, 'w')
     f.write(html_sjis.decode('cp932').encode('utf-8'))
     f.close()
-
 
 
 '''

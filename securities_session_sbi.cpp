@@ -393,9 +393,12 @@ public:
         {
             m_last_access_tick_pc = utility_datetime::GetTickCountGeneral();
             m_cookies_gr.Set(response.headers(), url);
+            const utility::string_t date_str(response.headers().date());
             concurrency::streams::istream bodyStream = response.body();
             concurrency::streams::container_buffer<std::string> inStringBuffer;
-            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer, callback](size_t bytesRead)
+            return bodyStream.read_to_delim(inStringBuffer, 0).then([this, inStringBuffer,
+                                                                           date_str,
+                                                                           callback](size_t bytesRead)
             {
                 // python関数多重呼び出しが起こり得る(ステップ実行中は特に)のでロックしておく
                 std::lock_guard<std::recursive_mutex> lock(m_mtx);
@@ -404,11 +407,14 @@ public:
                 using boost::python::extract;
                 //
                 const std::string& html_sjis = inStringBuffer.collection();
+                try {
                 const tuple t
                     = extract<tuple>(m_python.attr("getPortfolioPC_Owned")(html_sjis));
                 const bool b_result = extract<bool>(t[0]);
                 if (!b_result) {
-                    callback(false, SpotTradingsStockContainer(), StockPositionContainer());
+                    callback(false, SpotTradingsStockContainer(),
+                                    StockPositionContainer(),
+                                    date_str);
                     return;
                 }
                 SpotTradingsStockContainer spot;
@@ -439,7 +445,10 @@ public:
                         position.emplace_back(std::move(t_pos));
                     }
                 }
-                callback(true, spot, position);
+                callback(true, spot, position, date_str);
+                } catch(boost::python::error_already_set& e) {
+                    utility_python::OutputPythonError(e);
+                }
             });
         });
     }
@@ -488,8 +497,8 @@ public:
                     rcv_vunit.m_volume = extract<int64_t>(elem[6]);
                     rcv_valuedata.push_back(rcv_vunit);
                 }
-                const bool b_sucess = !rcv_valuedata.empty();
-                callback(b_sucess, date_str, rcv_valuedata);
+                const bool b_success = !rcv_valuedata.empty();
+                callback(b_success, rcv_valuedata, date_str);
             });
         });
     }

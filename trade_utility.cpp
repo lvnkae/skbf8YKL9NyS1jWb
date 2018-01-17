@@ -36,6 +36,10 @@ bool is_market_order(float64 value)
  *  @brief  株注文番号(証券会社発行)：空
  */
 int32_t BlankOrderID() { return -1; }
+/*!
+ *  @brief  株注文番号(証券会社発行)：空
+ */
+int32_t ValueOrder() { return 1; }
 
 } // namespace trade_utility
 } // namespace trading

@@ -9,6 +9,7 @@ MaxMonitoringCodeRegister = 50  -- 監視銘柄最大登録数
 StockMonitoringIntervalSecond = 10 -- 監視銘柄情報更新(取得)間隔[秒]
 StockExecInfoIntervalSecond = 64 -- 当日約定情報更新(取得)間隔[秒]
 EmergencyCoolSecond = 300 -- 緊急モード継続時間(=冷却期間)[秒]
+StockMonitoringLogDir = "log\\" -- 監視銘柄情報出力ディレクトリ
 
 -- 多分SBI専用
 UsePortfolioNumber_Monitor = 0  -- 監視銘柄を登録するポートフォリオ番号

@@ -30,6 +30,11 @@ bool is_market_order(float64 value);
  */
 int32_t BlankOrderID();
 
+/*!
+ *  @brief  Š”‰¿¬”“_—LŒøŒ…”F1
+ */
+int32_t ValueOrder();
+
 
 } // namespace trade_utility
 } // namespace trading

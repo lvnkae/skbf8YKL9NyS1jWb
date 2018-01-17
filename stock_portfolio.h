@@ -76,6 +76,12 @@ struct StockValueData
      *  @param  date    取得時刻(サーバ時間を使う)
      */
     void UpdateValueData(const RcvStockValueData& src, const garnet::sTime& date);
+
+    /*!
+     *  @brief  ログ出力
+     *  @param  filename    出力ファイル名(パス含む)
+     */
+    void OutputLog(const std::string& filename) const;
 };
 
 /*!

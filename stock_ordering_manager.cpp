@@ -25,6 +25,7 @@
 #include "utility/utility_string.h"
 
 #include <list>
+#include <thread>
 
 namespace trading
 {
@@ -567,12 +568,14 @@ private:
     /*!
      *  @brief  戦略解釈
      *  @param  investments 現在取引所種別
-     *  @param  hhmmss      現在時分秒
+     *  @param  now_time    現在時分秒
+     *  @param  sec_time    現セクション開始時刻
      *  @param  valuedata   価格データ(1取引所分)
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     void InterpretTactics(eStockInvestmentsType investments,
-                          const garnet::HHMMSS& hhmmss,
+                          const garnet::HHMMSS& now_time,
+                          const garnet::HHMMSS& sec_time,
                           const std::unordered_map<uint32_t, StockValueData>& valuedata,
                           TradeAssistantSetting& script_mng)
     {
@@ -586,9 +589,10 @@ private:
                 continue; // 価格データがまだない
             }
             //
-            const auto itEmStat = std::find_if(m_emergency_state.begin(),
-                                               m_emergency_state.end(),
-                                               [code, tactics_id](const EmergencyModeState& emstat)
+            const auto itEmStat
+                = std::find_if(m_emergency_state.begin(),
+                               m_emergency_state.end(),
+                               [code, tactics_id](const EmergencyModeState& emstat)
             {
                 return emstat.m_code == code && emstat.m_tactics_id == tactics_id;
             });
@@ -596,9 +600,11 @@ private:
             const auto& r_group =
                 (itEmStat != m_emergency_state.end()) ?itEmStat->m_group 
                                                       :blank_group;
-            m_tactics[tactics_id].Interpret(
-                investments, hhmmss, r_group, itVData->second, script_mng,
-                [this, investments](const StockTradingCommandPtr& command_ptr)
+            auto tactics(m_tactics[tactics_id]);
+            tactics.Interpret(investments, now_time, sec_time,
+                              r_group, itVData->second,
+                              script_mng,
+                              [this, investments](const StockTradingCommandPtr& command_ptr)
             {
                 EntryCommand(command_ptr, investments);
             });
@@ -740,6 +746,15 @@ public:
     }
 
     /*!
+     *  @brief  証券会社からの返答を待ってるか
+     *  @retval true    発注結果待ちしてる
+     */
+    bool IsInWaitMessageFromSecurities() const
+    {
+        return !m_wait_order.empty();
+    }
+    
+    /*!
      *  @brief  監視銘柄コード取得
      *  @param[out] dst 格納先
      */
@@ -780,6 +795,35 @@ public:
         return true;
     }
 
+    /*!
+     *  @brief  監視銘柄情報出力
+     *  @param  log_dir 出力ディレクトリ
+     *  @param  date    年月日
+     */
+    void OutputMonitoringLog(const std::string& log_dir, const garnet::YYMMDD& date) const
+    {
+        const auto outputLog = [log_dir, date](StockValueData vdata, std::string pts_tag)
+        {
+            const std::string code_str(std::move(std::to_string(vdata.m_code.GetCode())));
+            const std::string date_str(std::move(date.to_string()));
+            vdata.OutputLog(std::move(log_dir + pts_tag + code_str + "_" + date_str + ".csv"));
+        };
+        const auto itPTS = m_monitoring_data.find(INVESTMENTS_PTS);
+        if (itPTS != m_monitoring_data.end()) {
+            for (const auto& md: itPTS->second) {
+                std::thread t(outputLog, md.second, "pts_");
+                t.detach();
+            }
+        }
+        const auto itTKY = m_monitoring_data.find(INVESTMENTS_TOKYO);
+        if (itTKY != m_monitoring_data.end()) {
+            for (const auto& md: itTKY->second) {
+                std::thread t(outputLog, md.second, std::string());
+                t.detach();
+            }
+        }
+    }
+    
     /*!
      *  @brief  価格データ更新
      *  @param  investments_type    取引所種別
@@ -911,14 +955,16 @@ public:
     /*!
      *  @brief  Update関数
      *  @param  tickCount   経過時間[ミリ秒]
-     *  @param  hhmmss      現在時分秒
+     *  @param  now_time    現在時分秒
+     *  @param  sec_time    現セクション開始時刻
      *  @param  investments 取引所種別
      *  @param  valuedata   価格データ(1取引所分)
      *  @param  aes_pwd
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     void Update(int64_t tickCount,
-                const garnet::HHMMSS& hhmmss,
+                const garnet::HHMMSS& now_time,
+                const garnet::HHMMSS& sec_time,
                 eStockInvestmentsType investments,
                 const garnet::CipherAES_string& aes_pwd,
                 TradeAssistantSetting& script_mng)
@@ -944,7 +990,8 @@ public:
             }
         }
         // 戦略解釈
-        InterpretTactics(investments, hhmmss, m_monitoring_data[investments], script_mng);
+        InterpretTactics(investments, now_time, sec_time,
+                         m_monitoring_data[investments], script_mng);
         // 命令処理
         IssueOrder(investments, aes_pwd);
         //
@@ -972,6 +1019,15 @@ StockOrderingManager::~StockOrderingManager()
 }
 
 /*!
+ *  @brief  証券会社からの返答を待ってるか
+ *  @note   発注してる最中ならばtrue
+ */
+bool StockOrderingManager::IsInWaitMessageFromSecurities() const
+{
+    return m_pImpl->IsInWaitMessageFromSecurities();
+}
+
+/*!
  *  @brief  監視銘柄コード取得
  *  @param[out] dst 格納先
  */
@@ -988,6 +1044,16 @@ bool StockOrderingManager::InitMonitoringBrand(eStockInvestmentsType investments
                                                const StockBrandContainer& rcv_brand_data)
 {
     return m_pImpl->InitMonitoringBrand(investments_type, rcv_brand_data);
+}
+/*!
+ *  @brief  監視銘柄情報出力
+ *  @param  log_dir 出力ディレクトリ
+ *  @param  date    年月日
+ */
+void StockOrderingManager::OutputMonitoringLog(const std::string& log_dir,
+                                               const garnet::YYMMDD& date)
+{
+    m_pImpl->OutputMonitoringLog(log_dir, date);
 }
 
 /*!
@@ -1026,19 +1092,21 @@ void StockOrderingManager::UpdateExecInfo(const std::vector<StockExecInfoAtOrder
 /*!
  *  @brief  Update関数
  *  @param  tickCount   経過時間[ミリ秒]
- *  @param  hhmmss      現在時分秒
+ *  @param  now_time    現在時分秒
+ *  @param  sec_time    現セクション開始時刻
  *  @param  investments 取引所種別
  *  @param  valuedata   価格データ(1取引所分)
  *  @param  aes_pwd
  *  @param  script_mng  外部設定(スクリプト)管理者
  */
 void StockOrderingManager::Update(int64_t tickCount,
-                                  const garnet::HHMMSS& hhmmss,
+                                  const garnet::HHMMSS& now_time,
+                                  const garnet::HHMMSS& sec_time,
                                   eStockInvestmentsType investments,
                                   const garnet::CipherAES_string& aes_pwd,
                                   TradeAssistantSetting& script_mng)
 {
-    m_pImpl->Update(tickCount, hhmmss, investments, aes_pwd, script_mng);
+    m_pImpl->Update(tickCount, now_time, sec_time, investments, aes_pwd, script_mng);
 }
 
 

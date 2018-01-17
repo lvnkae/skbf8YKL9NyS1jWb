@@ -9,7 +9,7 @@
 #include "trade_define.h"
 
 #include <functional>
-#include <vector>
+#include <string>
 
 namespace garnet { class CipherAES_string; }
 
@@ -18,8 +18,11 @@ namespace trading
 class StockTradingStarter
 {
 public:
-    typedef std::function<bool(eStockInvestmentsType, const StockBrandContainer&)> InitMonitoringBrandFunc;
-    typedef std::function<void(const SpotTradingsStockContainer&, const StockPositionContainer&)> UpdateStockHoldingsFunc;
+    typedef std::function<bool(eStockInvestmentsType,
+                               const StockBrandContainer&)> InitMonitoringBrandFunc;
+    typedef std::function<void(const SpotTradingsStockContainer&,
+                               const StockPositionContainer&,
+                               const std::wstring& sv_date)> UpdateStockHoldingsFunc;
 
     StockTradingStarter();
     ~StockTradingStarter();

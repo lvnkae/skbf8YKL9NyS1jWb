@@ -42,13 +42,14 @@ private:
      */
      void GetStockOwned(const UpdateStockHoldingsFunc& update_func)
      {
-        m_pSecSession->GetStockOwned([this,update_func](bool b_result,
-                                                        const SpotTradingsStockContainer& spot,
-                                                        const StockPositionContainer& position)
+        m_pSecSession->GetStockOwned([this, update_func]
+                                     (bool b_result, const SpotTradingsStockContainer& spot,
+                                                     const StockPositionContainer& position,
+                                                     const std::wstring& sv_date)
         {
             if (b_result) {
                 m_sequence = SEQ_READY;
-                update_func(spot, position);
+                update_func(spot, position, sv_date);
             }
             // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
         });
@@ -67,21 +68,23 @@ private:
                                 const UpdateStockHoldingsFunc& update_func)
     {
         // 前回と同じ取引所なので登録不要
-        if (m_last_register_investments != investments_type) {
-            m_pSecSession->RegisterMonitoringCode(monitoring_code, investments_type,
-                                                  [this, investments_type, init_func, update_func]
-                                                  (bool b_result, const StockBrandContainer& rcv_brand)
-            {
-                if (b_result && init_func(investments_type, rcv_brand)) {
-                    GetStockOwned(update_func);
-                }
-                // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
-            });
-            m_last_register_investments = investments_type;
-            m_sequence = SEQ_BUSY;
-        } else {
+        if (m_last_register_investments == investments_type) {
             GetStockOwned(update_func);
+            return;
         }
+        m_pSecSession->RegisterMonitoringCode(monitoring_code, investments_type,
+                                              [this, investments_type,
+                                                     init_func,
+                                                     update_func]
+                                              (bool b_result, const StockBrandContainer& rcv_brand)
+        {
+            if (b_result && init_func(investments_type, rcv_brand)) {
+                GetStockOwned(update_func);
+            }
+            // 失敗した場合はBUSYのまま(スターター呼び出し側で対処)
+        });
+        m_last_register_investments = investments_type;
+        m_sequence = SEQ_BUSY;
     }
 
 public:

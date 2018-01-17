@@ -18,6 +18,7 @@ namespace garnet
 {
 class CipherAES_string;
 struct HHMMSS;
+struct YYMMDD;
 } // namespace garnet
 
 namespace trading
@@ -46,6 +47,12 @@ public:
     ~StockOrderingManager();
 
     /*!
+     *  @brief  証券会社からの返答を待ってるか
+     *  @retval true    発注結果待ちしてる
+     */
+    bool IsInWaitMessageFromSecurities() const;
+
+    /*!
      *  @brief  監視銘柄コード取得
      *  @param[out] dst 格納先
      */
@@ -58,6 +65,13 @@ public:
      */
     bool InitMonitoringBrand(eStockInvestmentsType investments_type,
                              const StockBrandContainer& rcv_brand_data);
+    /*!
+     *  @brief  監視銘柄情報出力
+     *  @param  log_dir 出力ディレクトリ
+     *  @param  date    年月日
+     */
+    void OutputMonitoringLog(const std::string& log_dir,
+                             const garnet::YYMMDD& date);
 
     /*!
      *  @brief  保有銘柄更新
@@ -85,13 +99,15 @@ public:
     /*!
      *  @brief  Update関数
      *  @param  tickCount   経過時間[ミリ秒]
-     *  @param  hhmmss      現在時分秒
+     *  @param  now_time    現在時分秒
+     *  @param  sec_time    現セクション開始時刻
      *  @param  investments 取引所種別
      *  @param  aes_pwd
      *  @param  script_mng  外部設定(スクリプト)管理者
      */
     void Update(int64_t tickCount,
-                const garnet::HHMMSS& hhmmss,
+                const garnet::HHMMSS& now_time,
+                const garnet::HHMMSS& sec_time,
                 eStockInvestmentsType investments,
                 const garnet::CipherAES_string& aes_pwd,
                 TradeAssistantSetting& script_mng);
