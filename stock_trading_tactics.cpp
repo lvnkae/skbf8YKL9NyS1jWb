@@ -178,7 +178,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
         if (em_group.end() != em_group.find(order.GetGroupID())) {
             continue; // 緊急モード制限中
         }
-        if (b_pts && order.GetIsLeverage()) {
+        if (b_pts && order.IsLeverage()) {
             continue; // PTS中は信用不可
         }
         if (!order.Judge(now_time, sec_time, valuedata, script_mng)) {
@@ -190,17 +190,15 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
                                                               valuedata.m_high,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
-        const trading::eOrderType otype = (order.GetType() == BUY) ?ORDER_BUY 
-                                                                   :ORDER_SELL;
         std::shared_ptr<StockTradingCommand> command_ptr(
             new StockTradingCommand_BuySellOrder(investments,
                                                  s_code,
                                                  m_unique_id,
                                                  order.GetGroupID(),
                                                  order.GetUniqueID(),
-                                                 otype,
-                                                 CONDITION_NONE, // >ToDo< 条件対応
-                                                 order.GetIsLeverage(),
+                                                 order.GetType(),
+                                                 order.GetOrderCondition(),
+                                                 order.IsLeverage(),
                                                  order.GetNumber(),
                                                  value));
         enqueue_func(command_ptr);
@@ -210,7 +208,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
         if (em_group.end() != em_group.find(order.GetGroupID())) {
             continue; // 緊急モード制限中
         }
-        if (b_pts && order.GetIsLeverage()) {
+        if (b_pts && order.IsLeverage()) {
             continue; // PTS中は信用不可
         }
         if (!order.Judge(now_time, sec_time, valuedata, script_mng)) {
@@ -223,7 +221,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
         std::shared_ptr<StockTradingCommand> command_ptr;
-        if (!order.GetIsLeverage()) {
+        if (!order.IsLeverage()) {
             // 現物売
             command_ptr.reset(new StockTradingCommand_BuySellOrder(investments,
                                                                    s_code,
@@ -231,21 +229,19 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
                                                                    order.GetGroupID(),
                                                                    order.GetUniqueID(),
                                                                    ORDER_SELL,
-                                                                   CONDITION_NONE, // >ToDo< 条件対応
-                                                                   order.GetIsLeverage(),
+                                                                   order.GetOrderCondition(),
+                                                                   false,
                                                                    order.GetNumber(),
                                                                    value));
         } else {
             // 信用返済売買
-            const trading::eOrderType otype = (order.GetType() == BUY) ?ORDER_REPBUY
-                                                                       :ORDER_REPSELL;
             command_ptr.reset(new StockTradingCommand_RepLevOrder(investments,
                                                                   s_code,
                                                                   m_unique_id,
                                                                   order.GetGroupID(),
                                                                   order.GetUniqueID(),
-                                                                  otype,
-                                                                  CONDITION_NONE, // >ToDo< 条件対応
+                                                                  order.GetType(),
+                                                                  order.GetOrderCondition(),
                                                                   order.GetNumber(),
                                                                   value,
                                                                   order.GetBargainDate(),

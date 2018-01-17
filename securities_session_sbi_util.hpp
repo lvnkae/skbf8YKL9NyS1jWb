@@ -361,17 +361,45 @@ void BuildTransmitMonitoringCodeFormData(web::http::http_request& request)
 /*!
  *  @brief  注文用form data文字列に価格情報を入れる
  *  @param[in]  value       注文価格
+ *  @param[in]  cond        注文条件
  *  @param[out] form_data   form data用文字列(格納先)
  */
-void BuildOrderValueToFormDataString(float64 value, std::wstring& form_data)
+void BuildOrderValueToFormDataString(float64 value, eOrderCondition cond, std::wstring& form_data)
 {
-    // 価格が0以下なら成行指定
-    if (static_cast<int64_t>(value) <= 0) {
-        utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_MARKETORDER, L"N", form_data);
+    std::wstring motag;
+    if (trade_utility::is_market_order(value)) {
+        switch (cond)
+        {
+        case CONDITION_OPENING:
+            motag = L"Y"; // 寄成
+            break;
+        case CONDITION_CLOSE:
+            motag = L"H"; // 引成
+            break;
+        default:
+            motag = L"N"; // 成行
+            break;
+        }
+        utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_MARKETORDER, motag, form_data);
         utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_VALUE, L"", form_data);
     } else {
-        utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_MARKETORDER, L"", form_data);
-        utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_VALUE, utility_string::ToWstringOrder(value, 1), form_data); // 小数点第1位まで採用
+        switch (cond)
+        {
+        case CONDITION_OPENING:
+            motag = L"Z"; // 寄指
+            break;
+        case CONDITION_CLOSE:
+            motag = L"I"; // 引指
+            break;
+        case CONDITION_UNPROMOTED:
+            motag = L"F"; // 不成
+        default:
+            break;
+        }
+        utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_MARKETORDER, motag, form_data);
+        const int32_t VO = trade_utility::ValueOrder();
+        const std::wstring value_str(std::move(utility_string::ToWstringOrder(value, VO)));
+        utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_VALUE, value_str, form_data);
     }
 }
 
@@ -397,11 +425,11 @@ void BuildFreshOrderFormData(const StockOrder& order, const std::wstring& pass, 
         utility_http::AddFormDataParamToString(ORDER_FORM[inx], form_data);
     }
     utility_http::AddFormDataParamToString(PARAM_NAME_REGIST_ID, std::to_wstring(regist_id), form_data);
-    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_BRAND, std::to_wstring(order.m_code.GetCode()), form_data);
-    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.m_code.GetCode()), form_data);
+    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_BRAND, std::to_wstring(order.GetCode()), form_data);
+    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.GetCode()), form_data);
     utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_INVESTIMENTS, GetSbiInvestimentsCode(order.m_investments), form_data);
     utility_http::AddFormDataParamToString(L"quantity", std::to_wstring(order.m_number), form_data);
-    BuildOrderValueToFormDataString(order.m_value, form_data);
+    BuildOrderValueToFormDataString(order.m_value, order.m_condition, form_data);
     //
     if (!pass.empty()) {
         utility_http::AddFormDataParamToString(PARAM_NAME_PASSWORD, pass, form_data);
@@ -459,7 +487,7 @@ void BuildRepaymenLeverageOrderFormdata(const std::string& caIQ,
     utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.m_code.GetCode()), form_data);
     utility_http::AddFormDataParamToString(L"open_market", GetSbiInvestimentsCode(order.m_investments), form_data);
     utility_http::AddFormDataParamToString(L"sum_quantity", std::to_wstring(order.m_number), form_data);
-    BuildOrderValueToFormDataString(order.m_value, form_data);
+    BuildOrderValueToFormDataString(order.m_value, order.m_condition, form_data);
     //
     utility_http::AddFormDataParamToString(PARAM_NAME_LEVERAGE_CATEGORY, L"6", form_data);   // >ToDo< 一般信用/日計りの対応
     //
@@ -507,7 +535,7 @@ void BuildCorrectOrderFormData(int32_t order_id, const StockOrder& order, const 
     if (!pass.empty()) {
         utility_http::AddFormDataParamToString(PARAM_NAME_PASSWORD, pass, form_data);
     }
-    BuildOrderValueToFormDataString(order.m_value, form_data);
+    BuildOrderValueToFormDataString(order.m_value, order.m_condition, form_data);
     //
     utility_http::SetFormData(form_data, request);
 }

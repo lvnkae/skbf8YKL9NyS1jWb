@@ -148,8 +148,18 @@ private:
         if (is_cond) {
             BuildStockTactics_TriggerUnit(o_message,
                                           [&o_order](const StockTradingTactics::Trigger& trigger)
-                                            { o_order.SetCondition(trigger); }
+                                            { o_order.SetTrigger(trigger); }
                                          );
+            std::string cond;
+            if (accessor.GetTableParam("Order", cond)) {
+                if (cond == "UNPROMOTED") {
+                    o_order.SetOrderCondition(CONDITION_UNPROMOTED);
+                } else if (cond == "CLOSE") {
+                    o_order.SetOrderCondition(CONDITION_CLOSE);
+                } else if (cond == "OPENING") {
+                    o_order.SetOrderCondition(CONDITION_OPENING);
+                }
+            }
         }
         accessor.CloseTable();
     }   
@@ -234,10 +244,10 @@ private:
             order.SetSell(false, val_func, number);
         } else
         if (repayment_type_str == "RepSell") {
-            order.SetSell(true, val_func, number);
+            order.SetRepSell(val_func, number);
         } else
         if (repayment_type_str == "RepBuy") {
-            order.SetBuy(true, val_func, number);
+            order.SetRepBuy(val_func, number);
         } else {
             o_message.AddErrorMessage("illegal repayment type(" + repayment_type_str + ")");
             return;

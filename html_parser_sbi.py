@@ -1086,7 +1086,11 @@ class StockOrderExParser(HTMLParser):
                                     if u_data_value == u'成行':
                                         self.value = float(-1.0)
                                     else:
-                                        self.value = float(deleteComma(u_data_value.replace(u'円', '')))
+                                        if '/' in u_data_value:
+                                            # '不成/468円' みたいなの(価格指定+条件付き発注)
+                                            self.value = float(deleteComma(u_data_value.split('/')[1].replace(u'円', '')))
+                                        else:
+                                            self.value = float(deleteComma(u_data_value.replace(u'円', '')))
                                 if u'取引' in u_data_tag:
                                     if u'信用' in u_data_value:
                                         self.b_leverage = True

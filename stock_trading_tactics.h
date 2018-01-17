@@ -39,13 +39,6 @@ private:
         NO_CONTRACT,    // 無約定間隔(時間t以上約定がなかった)
         SCRIPT_FUNCTION,// スクリプト関数判定
     };
-    enum eTacticsOrder
-    {
-        ORDER_NONE,
-
-        BUY,    // 買い注文
-        SELL,   // 売り注文
-    };
 
 public:
     /*!
@@ -132,12 +125,14 @@ public:
     private:
         int32_t m_unique_id;    //!< 注文固有ID
         int32_t m_group_id;     //!< 戦略グループID(同一グループの注文は排他制御される)
-        eTacticsOrder m_type;   //!< タイプ
-        int32_t m_value_func;   //!< 価格取得関数(リファレンス)
-        int32_t m_number;       //!< 株数
+        eOrderType m_type;      //!< タイプ
         bool m_b_leverage;      //!< 信用フラグ
+        int32_t m_number;       //!< 株数
+        eOrderCondition m_cond; //!< 注文条件
+        int32_t m_value_func;   //!< 価格取得関数(リファレンス)
 
-        void SetParam(eTacticsOrder type, bool b_leverage, int32_t func_ref, int32_t number)
+    protected:
+        void SetParam(eOrderType type, bool b_leverage, int32_t func_ref, int32_t number)
         {
             m_type = type;
             m_value_func = func_ref;
@@ -150,24 +145,28 @@ public:
         : Trigger()
         , m_unique_id(0)
         , m_group_id(0)
-        , m_type(eTacticsOrder::ORDER_NONE)
-        , m_number(0)
-        , m_value_func(0)
+        , m_type(ORDER_NONE)
         , m_b_leverage(false)
+        , m_number(0)
+        , m_cond(CONDITION_NONE)
+        , m_value_func(0)
         {
         }
 
+        void SetTrigger(const Trigger& trigger) { Copy(trigger); }
+
         void SetUniqueID(int32_t unique_id) { m_unique_id = unique_id; }
         void SetGroupID(int32_t group_id) { m_group_id = group_id; }
-        void SetBuy(bool b_leverage, int32_t func_ref, int32_t number) { SetParam(BUY, b_leverage, func_ref, number); }
-        void SetSell(bool b_leverage, int32_t func_ref, int32_t number) { SetParam(SELL, b_leverage, func_ref, number); }
-        void SetCondition(const Trigger& trigger) { Copy(trigger); }
+        void SetBuy(bool b_leverage, int32_t func_ref, int32_t number) { SetParam(ORDER_BUY, b_leverage, func_ref, number); }
+        void SetSell(bool b_leverage, int32_t func_ref, int32_t number) { SetParam(ORDER_SELL, b_leverage, func_ref, number); }
+        void SetOrderCondition(eOrderCondition cond) { m_cond = cond; }
 
-        eTacticsOrder GetType() const { return m_type; }
-        int32_t GetGroupID() const { return m_group_id; }
         int32_t GetUniqueID() const { return m_unique_id; }
+        int32_t GetGroupID() const { return m_group_id; }
+        eOrderType GetType() const { return m_type; }
+        bool IsLeverage() const { return m_b_leverage; }
         int32_t GetNumber()  const { return m_number; }
-        bool GetIsLeverage() const { return m_b_leverage; }
+        eOrderCondition GetOrderCondition() const { return m_cond; }
 
         /*!
          *  @brief  価格取得関数参照取得
@@ -190,6 +189,9 @@ public:
         , m_bargain_value(0.0)
         {
         }
+
+        void SetRepBuy(int32_t func_ref, int32_t number) { SetParam(ORDER_REPBUY, true, func_ref, number); }
+        void SetRepSell(int32_t func_ref, int32_t number) { SetParam(ORDER_REPSELL, true, func_ref, number); }
 
         void SetBargainInfo(const std::string& date_str, float64 value)
         {

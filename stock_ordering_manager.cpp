@@ -187,7 +187,33 @@ private:
             src += nl + L"株数 " + std::to_wstring(order.m_number);
             src += nl + L"価格 " + garnet::utility_string::ToWstringOrder(order.m_value, 1);
             if (order.m_b_market_order) {
-                src += L"(成行)";
+                switch (order.m_condition)
+                {
+                case CONDITION_OPENING:
+                    src += L"(寄成)";
+                    break;
+                case CONDITION_CLOSE:
+                    src += L"(引成)";
+                    break;
+                default:
+                    src += L"(成行)";
+                    break;
+                }
+            } else {
+                switch (order.m_condition)
+                {
+                case CONDITION_OPENING:
+                    src += L"(寄指)";
+                    break;
+                case CONDITION_CLOSE:
+                    src += L"(引指)";
+                    break;
+                case CONDITION_UNPROMOTED:
+                    src += L"(不成)";
+                    break;
+                default:
+                    break;
+                }
             }
         }
         if (!err.empty()) {

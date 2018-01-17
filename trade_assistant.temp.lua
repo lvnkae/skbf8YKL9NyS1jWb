@@ -155,6 +155,7 @@ StockTactics = {
                 Quantity = -1,
                 -- 返済条件
                 Condition = {
+                    Order = "UNPROMOTED", -- 注文条件(OPENING:寄り/CLOSE:引け/UNPROMOTED:不成)
                     Type = "Formula", -- lua関数で判定
                     Formula = (function(v, high, low, yesterday)
                                 -- 現値がlimitを上回ったら発注
