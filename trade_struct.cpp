@@ -6,6 +6,9 @@
 #include "trade_struct.h"
 #include "trade_utility.h"
 
+#include "twitter/twitter_session.h"
+#include "utility/utility_string.h"
+
 namespace trading
 {
 /*!
@@ -13,17 +16,14 @@ namespace trading
  */
 const uint32_t STOCK_CODE_NONE = 0;
 
-/*!
- *  @brief
- */
 StockCode::StockCode()
 : m_code(STOCK_CODE_NONE)
 {
 }
 
 /*!
-*  @brief
-*/
+ *  @param  銘柄コード
+ */
 StockCode::StockCode(uint32_t code)
 : m_code(code)
 {
@@ -66,6 +66,7 @@ StockOrder::StockOrder(const RcvResponseStockOrder& rcv)
 
 /*!
  *  @note   RcvResponseStockOrderとの比較
+ *  @param  right   比較対象
  */
 bool StockOrder::operator==(const RcvResponseStockOrder& right) const
 {
@@ -78,7 +79,88 @@ bool StockOrder::operator==(const RcvResponseStockOrder& right) const
 }
 
 /*!
+ *  @brief  メッセージ出力用文字列生成
+ *  @param[in]  order_id    注文番号
+ *  @param[in]  name        銘柄名
+ *  @param[in]  number      株数
+ *  @param[in]  value       価格
+ *  @param[out] o_str       格納先
  */
+void StockOrder::BuildMessageString(int32_t order_id,
+                                    const std::wstring& name,
+                                    int32_t number,
+                                    float64 value,
+                                    std::wstring& o_str) const
+{
+    const std::wstring nl(std::move(garnet::twitter::GetNewlineString()));
+    const uint32_t code = GetCode();
+    switch (m_type)
+    {
+    case ORDER_BUY:
+        if (m_b_leverage) {
+            o_str += L"(信用新規買)";
+        } else {
+            o_str += L"(現物買)";
+        }
+        break;
+    case ORDER_SELL:
+        if (m_b_leverage) {
+            o_str += L"(信用新規売)";
+        } else {
+            o_str += L"(現物売)";
+        }
+        break;
+    case ORDER_CORRECT:
+        o_str += L"(注文訂正)";
+        break;
+    case ORDER_CANCEL:
+        o_str += L"(注文取消)";
+        break;
+    case ORDER_REPSELL:
+        o_str += L"(信用返済売)";
+        break;
+    case ORDER_REPBUY:
+        o_str += L"(信用返済買)";
+        break;                
+    }
+    const int32_t DISP_ORDER_ID = 4;
+    const int32_t VALUE_ORDER = trade_utility::ValueOrder();
+    o_str += L" " + garnet::utility_string::ToSecretIDOrder(order_id, DISP_ORDER_ID);
+    o_str += nl + std::to_wstring(code) + L" " + name;
+    o_str += nl + L"株数 " + std::to_wstring(number);
+    o_str += nl + L"価格 " + garnet::utility_string::ToWstringOrder(value, VALUE_ORDER);
+    if (m_b_market_order) {
+        switch (m_condition)
+        {
+        case CONDITION_OPENING:
+            o_str += L"(寄成)";
+            break;
+        case CONDITION_CLOSE:
+            o_str += L"(引成)";
+            break;
+        default:
+            o_str += L"(成行)";
+            break;
+        }
+    } else {
+        switch (m_condition)
+        {
+        case CONDITION_OPENING:
+            o_str += L"(寄指)";
+            break;
+        case CONDITION_CLOSE:
+            o_str += L"(引指)";
+            break;
+        case CONDITION_UNPROMOTED:
+            o_str += L"(不成)";
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+
 RcvResponseStockOrder::RcvResponseStockOrder()
 : m_order_id(trade_utility::BlankOrderID())
 , m_user_order_id(trade_utility::BlankOrderID())
@@ -91,8 +173,6 @@ RcvResponseStockOrder::RcvResponseStockOrder()
 {
 }
 
-/*!
- */
 StockExecInfoAtOrderHeader::StockExecInfoAtOrderHeader()
 : m_user_order_id(trade_utility::BlankOrderID())
 , m_type(ORDER_NONE)

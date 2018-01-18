@@ -547,7 +547,6 @@ public:
                 const list l = extract<list>(t[1]);
                 const auto len = boost::python::len(l);
                 garnet::sTime exe_tm;
-                exe_tm.tm_year = date_tm.tm_year;
                 std::vector<StockExecInfoAtOrder> rcv_data;
                 rcv_data.reserve(len);
                 for (auto inx = 0; inx < len; inx++) {
@@ -570,6 +569,7 @@ public:
                         const int32_t number = extract<int32_t>(exe_elem[1]);
                         const float64 value = extract<float64>(exe_elem[2]);
                         utility_datetime::ToTimeFromString(datetime, "%m/%d %H:%M:%S", exe_tm);
+                        exe_tm.tm_year = date_tm.tm_year;
                         exe_info.m_exec.emplace_back(exe_tm, number, value);
                     }
                     rcv_data.emplace_back(std::move(exe_info));

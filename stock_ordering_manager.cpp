@@ -32,7 +32,6 @@ namespace trading
 
 namespace
 {
-
 void AddErrorMsg(const std::wstring& err, std::wstring& dst)
 {
     if (dst.empty()) {
@@ -40,6 +39,11 @@ void AddErrorMsg(const std::wstring& err, std::wstring& dst)
     } else {
         dst += garnet::twitter::GetNewlineString() + err;
     }
+}
+std::wstring GetErrorMsgHeader()
+{
+    const std::wstring nl(std::move(garnet::twitter::GetNewlineString()));
+    return nl + L"[error]" + nl;
 }
 } // namespace
 
@@ -132,94 +136,26 @@ private:
     int64_t m_tick_count;
 
     /*!
-     *  @brief  売買注文結果メッセージ出力
-     *  @param  b_result    成否
-     *  @param  order       注文パラメータ
-     *  @param  order_id    注文番号
-     *  @param  name        銘柄名
-     *  @param  err         エラーメッセージ
+     *  @brief  注文約定メッセージ出力
+     *  @param  command_ptr 注文命令
+     *  @param  exec_info   約定情報(1注文分)
      *  @param  date        発生日時
      *  @note   出力先はtwitter
      */
-    void OutputMessage(bool b_result,
-                       const StockOrder& order,
-                       int32_t order_id,
-                       const std::wstring& err,
-                       const std::wstring& date)
+    void OutputExecMessage(const StockTradingCommandPtr& command_ptr,
+                           const StockExecInfoAtOrder& ex_info)
     {
-        const std::wstring nl(std::move(garnet::twitter::GetNewlineString()));
-        std::wstring src((b_result) ?L"注文受付" : L"注文失敗");
-        if (order.m_type == ORDER_NONE) {
-            // orderが空で呼ばれることもある(発注失敗時)
-        } else {
-            const uint32_t code = order.m_code.GetCode();
-            switch (order.m_type)
-            {
-            case ORDER_BUY:
-                if (order.m_b_leverage) {
-                    src += L"(信用新規買)";
-                } else {
-                    src += L"(現物買)";
-                }
-                break;
-            case ORDER_SELL:
-                if (order.m_b_leverage) {
-                    src += L"(信用新規売)";
-                } else {
-                    src += L"(現物売)";
-                }
-                break;
-            case ORDER_CORRECT:
-                src += L"(注文訂正)";
-                break;
-            case ORDER_CANCEL:
-                src += L"(注文取消)";
-                break;
-            case ORDER_REPSELL:
-                src += L"(信用返済売)";
-                break;
-            case ORDER_REPBUY:
-                src += L"(信用返済買)";
-                break;                
-            }
-            src += L" " + garnet::utility_string::ToSecretIDOrder(order_id, 4);
-            src += nl + std::to_wstring(code) + L" " + m_monitoring_brand[code];
-            src += nl + L"株数 " + std::to_wstring(order.m_number);
-            src += nl + L"価格 " + garnet::utility_string::ToWstringOrder(order.m_value, 1);
-            if (order.m_b_market_order) {
-                switch (order.m_condition)
-                {
-                case CONDITION_OPENING:
-                    src += L"(寄成)";
-                    break;
-                case CONDITION_CLOSE:
-                    src += L"(引成)";
-                    break;
-                default:
-                    src += L"(成行)";
-                    break;
-                }
-            } else {
-                switch (order.m_condition)
-                {
-                case CONDITION_OPENING:
-                    src += L"(寄指)";
-                    break;
-                case CONDITION_CLOSE:
-                    src += L"(引指)";
-                    break;
-                case CONDITION_UNPROMOTED:
-                    src += L"(不成)";
-                    break;
-                default:
-                    break;
-                }
-            }
+        const int32_t order_id = ex_info.m_user_order_id;
+        const StockOrder order(std::move(command_ptr->GetOrder()));
+        const std::wstring name(m_monitoring_brand[order.GetCode()]);
+        const std::wstring zone(L"JST");
+        for (const auto& ex: ex_info.m_exec) {
+            std::wstring src(L"約定");
+            order.BuildMessageString(order_id, name, ex.m_number, ex.m_value, src);
+            const std::wstring date(
+                std::move(garnet::utility_datetime::ToRFC1123(ex.m_date, ex.m_time, zone)));
+            m_pTwSession->Tweet(date, src);
         }
-        if (!err.empty()) {
-            src += nl + L"[error]" + nl + err;
-        }
-        m_pTwSession->Tweet(date, src);
     }
 
     /*!
@@ -235,10 +171,12 @@ private:
                             const std::wstring& sv_date,
                             eStockInvestmentsType investments)
     {
+        std::wstring message((b_result) ?L"注文受付" : L"注文失敗");
+        //
         if (m_wait_order.empty()) {
             // なぜか注文待ちがない(error)
-            const std::wstring err_msg(L"%wait_order is empty");
-            OutputMessage(b_result, StockOrder(rcv_order), rcv_order.m_order_id, err_msg, sv_date);
+            message += GetErrorMsgHeader() + L"%wait_order is empty";
+            m_pTwSession->Tweet(sv_date, message);
         } else {
             const StockTradingCommandPtr& w_cmd_ptr = m_wait_order.front();
             const StockOrder w_order(std::move(w_cmd_ptr->GetOrder()));
@@ -292,8 +230,21 @@ private:
                     break;
                 }
             }
-            // 通知(m_wait_orderを参照してるので↑↓で処理が別れてる)
-            OutputMessage(b_result, w_order, rcv_order.m_user_order_id, err_msg, sv_date);
+            // 通知
+            {
+                if (w_order.m_type == ORDER_NONE) {
+                    // orderが空で呼ばれることもある(発注失敗時)
+                } else {
+                    const std::wstring name(m_monitoring_brand[w_order.GetCode()]);
+                    w_order.BuildMessageString(rcv_order.m_user_order_id,
+                                               name, w_order.m_number, w_order.m_value,
+                                               message);
+                }
+                if (!err_msg.empty()) {
+                    message += GetErrorMsgHeader() + err_msg;
+                }
+                m_pTwSession->Tweet(sv_date, message);
+            }
             // 注文待ち解除(成否問わない)
             m_wait_order.pop_back();
         }
@@ -925,47 +876,47 @@ public:
             }
             rep_order.emplace(user_order_id, itOrder->second);
         }
-        // 差分反映
+        // 保有銘柄管理更新
         m_holdings.UpdateExecInfo(rcv_info, diff_info, rep_order);
         // 約定済み注文更新
-        {
-            for (auto it = m_exec_order.begin(); it != m_exec_order.end(); it++) {
-                const StockCode s_code(it->first);
-                auto itRmv = std::remove_if(it->second.begin(),
-                                            it->second.end(),
-                                            [this, &s_code](const StockExecOrderIdentifier& ex) {
-                    return !m_holdings.CheckPosition(s_code, ex.second);
-                });
-                if (it->second.end() != itRmv) {
-                    it->second.erase(itRmv, it->second.end());
-                }
+        for (auto it = m_exec_order.begin(); it != m_exec_order.end(); it++) {
+            // 紐付いた"保有建玉"がなくなってたら"約定済み注文"も削除
+            const StockCode s_code(it->first);
+            auto itRmv = std::remove_if(it->second.begin(),
+                                        it->second.end(),
+                                        [this, &s_code](const StockExecOrderIdentifier& ex) {
+                return !m_holdings.CheckPosition(s_code, ex.second);
+            });
+            if (it->second.end() != itRmv) {
+                it->second.erase(itRmv, it->second.end());
             }
         }
-        // 全部約定した発注済み注文を削除する
+        // 発注済み注文更新
         for (const auto& ex_info: diff_info) {
-            if (!ex_info.m_b_complete) {
-                continue;
-            }
             auto& sv_order(m_server_order[ex_info.m_investments]);
             const int32_t user_order_id = ex_info.m_user_order_id;
             const auto itOrder = SearchServerOrder(sv_order, user_order_id);
             if (itOrder == sv_order.end()) {
-                continue; // (a)
+                continue; // (a)に同じ
             }
-            // 現物買/新規信用売買ならば「約定済み注文」へ登録
-            const uint32_t code = ex_info.m_code;
-            const eOrderType type = ex_info.m_type;
-            if (ex_info.m_b_leverage && (type == ORDER_BUY || type == ORDER_SELL)) {
-                std::vector<int32_t> pos_id;
-                m_holdings.GetPositionID(user_order_id, pos_id);
-                m_exec_order[code].emplace_back(*itOrder->second, pos_id);
-            } else if (type == ORDER_BUY) {
-                m_exec_order[code].emplace_back(*itOrder->second, std::vector<int32_t>());
+            // 約定通知
+            OutputExecMessage(itOrder->second, ex_info);
+            // 全部約定
+            if (!ex_info.m_b_complete) {
+                // 現物買/新規信用売買ならば「約定済み注文」へ登録
+                const uint32_t code = ex_info.m_code;
+                const eOrderType type = ex_info.m_type;
+                if (ex_info.m_b_leverage && (type == ORDER_BUY || type == ORDER_SELL)) {
+                    std::vector<int32_t> pos_id;
+                    m_holdings.GetPositionID(user_order_id, pos_id);
+                    m_exec_order[code].emplace_back(*itOrder->second, pos_id);
+                } else if (type == ORDER_BUY) {
+                    m_exec_order[code].emplace_back(*itOrder->second, std::vector<int32_t>());
+                }
+                // "発注済み注文"から削除
+                sv_order.erase(itOrder);
             }
-            // 削除
-            sv_order.erase(itOrder);
         }
-        // 約定通知 >ToDo<
     }
     /*!
      *  @brief  保有銘柄更新
@@ -1134,6 +1085,5 @@ void StockOrderingManager::Update(int64_t tickCount,
 {
     m_pImpl->Update(tickCount, now_time, sec_time, investments, aes_pwd, script_mng);
 }
-
 
 } // namespace trading

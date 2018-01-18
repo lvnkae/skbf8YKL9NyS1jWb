@@ -179,6 +179,21 @@ struct StockTimeTableUnit
      */
     bool operator==(const RcvResponseStockOrder& right) const;
     bool operator!=(const RcvResponseStockOrder& right) const { return !(*this == right); }
+
+    /*!
+     *  @brief  メッセージ出力用文字列生成
+     *  @param[in]  order_id    注文番号
+     *  @param[in]  name        銘柄名
+     *  @param[in]  number      株数
+     *  @param[in]  value       価格
+     *  @param[out] o_str       格納先
+     *  @note   twitter出力用
+     */
+    void BuildMessageString(int32_t order_id,
+                            const std::wstring& name,
+                            int32_t number,
+                            float64 value,
+                            std::wstring& o_str) const;
 };
 
 /*!
