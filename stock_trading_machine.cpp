@@ -4,6 +4,7 @@
  *  @date   2017/05/05
  */
 #include "stock_trading_machine.h"
+#include "trade_debug.h"
 
 #include "securities_session_sbi.h"
 #include "stock_ordering_manager.h"
@@ -17,7 +18,6 @@
 #include "random_generator.h"
 #include "twitter/twitter_session.h"
 #include "utility/utility_datetime.h"
-#include "yymmdd.h"
 #include "garnet_time.h"
 
 #include <codecvt>
@@ -140,6 +140,7 @@ private:
             garnet::sTime& sv_time(m_last_sv_time);
             UpdateServerTime(datetime);
 
+#if !defined(DEBUG_SV_TIME_OVERRIDE) || (DEBUG_SV_TIME_OVERRIDE == 0)
             const uint32_t ACCEPTABLE_DIFF_SECONDS = 10*60; // ‹–—e‚³‚ê‚éŽžŠÔƒYƒŒ(10•ª)
             const uint32_t diff_sec
                 = utility_datetime::GetDiffSecondsFromLocalMachineTime(sv_time);
@@ -147,14 +148,12 @@ private:
                 // ŽžŠÔƒYƒŒ‚ª‚Ð‚Ç‚©‚Á‚½‚ç—]Œv‚È‚±‚Æ‚Í‚³‚¹‚¸A‰i‰“‚É‘Ò‚½‚¹‚é(‹Ù‹}ƒ‚[ƒh)
                 return;
             }
+#elif defined(DEBUG_DISABLE_HOLIDAY) && (DEBUG_DISABLE_HOLIDAY != 0)
+            sv_time.tm_wday = 1;
+            is_holiday = false;
+#endif/* DEBUG_SV_TIME_OVERRIDE */
 
             m_after_wait_seq = SEQ_CLOSED_CHECK;
-
-            //sv_time.tm_hour =9;//
-            //sv_time.tm_min = 19;//
-            //sv_time.tm_sec = 25;//
-            //sv_time.tm_wday = 1;
-            //is_holiday = false;
 
             // “y“ú‚È‚çT–¾‚¯‚ÉÄ’²¸(¬”Û‚ÉŠÖŒW‚È‚­)
             if (utility_datetime::SATURDAY == sv_time.tm_wday) {
@@ -404,6 +403,16 @@ private:
         auto pt(std::move(garnet::utility_datetime::ToLocalTimeFromRFC1123(datetime)));
         garnet::utility_datetime::ToTimeFromBoostPosixTime(pt, m_last_sv_time);
         m_last_sv_time_tick = garnet::utility_datetime::GetTickCountGeneral();
+
+#if defined(DEBUG_SV_TIME_OVERRIDE) && (DEBUG_SV_TIME_OVERRIDE != 0)
+        static int32_t ov_count = 2;
+        if (ov_count > 0) {
+            m_last_sv_time.tm_hour =  9;
+            m_last_sv_time.tm_min  = 19;
+            m_last_sv_time.tm_sec  = 25;
+            ov_count--;
+        }
+#endif/* DEBUG_SV_TIME_OVERRIDE */
     }
 
     /*!

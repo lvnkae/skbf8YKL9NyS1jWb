@@ -7,11 +7,9 @@
 
 #include "stock_code.h"
 #include "hhmmss.h"
-#include "yymmdd.h"
 
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 namespace trading
 {
@@ -98,16 +96,7 @@ struct RcvStockValueData
     float64 m_close;    //!< 前営業日終値    
     int64_t m_volume;   //!< 出来高
 
-    RcvStockValueData()
-    : m_code(0)
-    , m_value(0.f)
-    , m_open(0.f)
-    , m_high(0.f)
-    , m_low(0.f)
-    , m_close(0.f)
-    , m_volume(0)
-    {
-    }
+    RcvStockValueData();
 };
 
 } // namespace trading

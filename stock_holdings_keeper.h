@@ -8,8 +8,6 @@
 #include "stock_trading_command_fwd.h"
 #include "trade_container.h"
 
-#include "yymmdd.h"
-
 #include <memory>
 #include <vector>
 
@@ -126,7 +124,7 @@ public:
 
 private:
     StockHoldingsKeeper(const StockHoldingsKeeper&);
-    StockHoldingsKeeper(const StockHoldingsKeeper&&);
+    StockHoldingsKeeper(StockHoldingsKeeper&&);
     StockHoldingsKeeper& operator= (const StockHoldingsKeeper&);
 
     class PIMPL;

@@ -34,4 +34,4 @@ public:
     }
 };
 
-} // trading
+} // namespace trading

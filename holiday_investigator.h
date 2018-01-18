@@ -2,7 +2,7 @@
  *  @file   holiday_investigator.h
  *  @brief  [common]今日が休日かどうか調査するクラス
  *  @date   2017/12/18
- *  @note   python2.7, boost(boost::python), C++REST に依存している
+ *  @note   python2.7, boost(boost::python), cpprestsdk に依存している
  *  @note   "yonelabo.com/today_holyday/" が落ちてたらアウト
  *  @note   実行時にholiday_investigator.pyが必要
  */

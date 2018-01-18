@@ -8,13 +8,11 @@
 
 #include "environment.h"
 #include "trade_assistor.h"
-
 #include "update_message.h"
+
 #include "utility/utility_datetime.h"
 
 #include <iostream>
-#include "cpprest/http_client.h"
-#include "cpprest/filestream.h"
 
 class nnStreambuf : public std::wstreambuf {
 public:

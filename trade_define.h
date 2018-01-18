@@ -17,7 +17,7 @@ enum eTradingType
 
     TYPE_STOCK,     //!< Š”Ž®
     TYPE_FX,        //!< ˆ×‘Ö
-    TYPE_CRYPT_CR,  //!< ˆÃ†’Ê‰Ý(‰¼‘z’Ê‰Ý)
+    TYPE_CRYPTO_CR, //!< ˆÃ†’Ê‰Ý(‰¼‘z’Ê‰Ý)
 };
 
 /*!

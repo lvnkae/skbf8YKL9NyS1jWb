@@ -8,16 +8,10 @@
 namespace trading
 {
 
-/*!
- *  @brief
- */
 SecuritiesSession::SecuritiesSession()
 {
 }
 
-/*!
- *  @brief
- */
 SecuritiesSession::~SecuritiesSession()
 {
 }

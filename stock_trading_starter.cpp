@@ -8,14 +8,10 @@
 namespace trading
 {
 
-/*!
- */
 StockTradingStarter::StockTradingStarter()
 {
 }
 
-/*!
- */
 StockTradingStarter::~StockTradingStarter()
 {
 }

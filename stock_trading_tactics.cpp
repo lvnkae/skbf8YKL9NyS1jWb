@@ -7,18 +7,17 @@
 
 #include "stock_portfolio.h"
 #include "stock_trading_command.h"
+#include "stock_trading_tactics_utility.h"
 #include "trade_assistant_setting.h"
-#include "trade_define.h"
 
 #include <algorithm>
 
 namespace trading
 {
 
-/*!
- */
 StockTradingTactics::StockTradingTactics()
-: m_emergency()
+: m_unique_id(tactics_utility::BlankTacticsID())
+, m_emergency()
 , m_fresh()
 , m_repayment()
 {
@@ -26,7 +25,7 @@ StockTradingTactics::StockTradingTactics()
 
 
 /*!
- *  @brief  緊急モードを追加する
+ *  @brief  緊急モードを追加
  *  @param  emergency   緊急モード設定
  */
 void StockTradingTactics::AddEmergencyMode(const Emergency& emergency)
@@ -167,7 +166,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
         if (!emg.Judge(now_time, sec_time, valuedata, script_mng)) {
             continue;
         }
-        std::shared_ptr<StockTradingCommand> command_ptr(
+        StockTradingCommandPtr command_ptr(
             new StockTradingCommand_Emergency(s_code,
                                               m_unique_id,
                                               emg.RefTargetGroup()));
@@ -190,7 +189,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
                                                               valuedata.m_high,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
-        std::shared_ptr<StockTradingCommand> command_ptr(
+        StockTradingCommandPtr command_ptr(
             new StockTradingCommand_BuySellOrder(investments,
                                                  s_code,
                                                  m_unique_id,
@@ -220,7 +219,7 @@ void StockTradingTactics::Interpret(eStockInvestmentsType investments,
                                                               valuedata.m_high,
                                                               valuedata.m_low,
                                                               valuedata.m_close);
-        std::shared_ptr<StockTradingCommand> command_ptr;
+        StockTradingCommandPtr command_ptr;
         if (!order.IsLeverage()) {
             // 現物売
             command_ptr.reset(new StockTradingCommand_BuySellOrder(investments,

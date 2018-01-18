@@ -5,7 +5,6 @@
  */
 #pragma once
 
-#include "trade_define.h"
 #include "trading_machine.h"
 
 #include "twitter/twitter_session_fwd.h"

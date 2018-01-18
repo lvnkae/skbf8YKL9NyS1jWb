@@ -65,5 +65,15 @@ void StockValueData::OutputLog(const std::string& filename) const
     outputfile.close();
 }
 
+RcvStockValueData::RcvStockValueData()
+: m_code(StockCode().GetCode())
+, m_value(0.f)
+, m_open(0.f)
+, m_high(0.f)
+, m_low(0.f)
+, m_close(0.f)
+, m_volume(0)
+{
+}
 
 } // namespace trading

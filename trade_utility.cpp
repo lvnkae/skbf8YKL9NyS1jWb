@@ -37,7 +37,7 @@ bool is_market_order(float64 value)
  */
 int32_t BlankOrderID() { return -1; }
 /*!
- *  @brief  株注文番号(証券会社発行)：空
+ *  @brief  株価小数点有効桁数：1
  */
 int32_t ValueOrder() { return 1; }
 

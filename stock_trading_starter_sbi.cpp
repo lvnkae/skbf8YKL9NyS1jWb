@@ -9,7 +9,6 @@
 #include "trade_assistant_setting.h"
 
 #include "cipher_aes.h"
-#include "random_generator.h"
 #include "twitter/twitter_session.h"
 #include "utility/utility_datetime.h"
 

@@ -2,7 +2,7 @@
  *  @file   stock_trading_starter_sbi.h
  *  @brief  株取引スタート係：SBI用
  *  @date   2017/12/20
- *  @note   ログイン→監視銘柄登録の順で実行
+ *  @note   ログイン→監視銘柄登録→保有銘柄取得 の順で実行
  */
 #pragma once
 

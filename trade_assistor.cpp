@@ -94,7 +94,7 @@ public:
 
     /*!
      *  @brief  トレード開始
-     *  @param  tickCount   現在時刻(tickCount)
+     *  @param  tickCount   経過時間[ミリ秒]
      *  @param  uid
      *  @param  pwd
      *  @param  pwd_sub
@@ -108,6 +108,8 @@ public:
 
     /*!
      *  @brief  Update関数
+     *  @param[in]  tickCount   経過時間[ミリ秒]
+     *  @param[out] o_message   メッセージ(格納先)
      */
     void Update(int64_t tickCount, UpdateMessage& o_message)
     {
@@ -125,17 +127,11 @@ public:
     }
 };
 
-/*!
- *  @brief
- */
 TradeAssistor::TradeAssistor()
 : m_pImpl(new PIMPL())
 {
 }
 
-/*!
- *  @brief
- */
 TradeAssistor::~TradeAssistor()
 {
 }
@@ -158,7 +154,7 @@ bool TradeAssistor::IsReady() const
 
 /*!
  *  @brief  トレード開始
- *  @param  tickCount   現在時刻(tickCount)
+ *  @param  tickCount   経過時間[ミリ秒]
  *  @param  uid
  *  @param  pwd
  *  @param  pwd_sub
@@ -170,7 +166,7 @@ void TradeAssistor::Start(int64_t tickCount, const std::wstring& uid, const std:
 
 /*!
  *  @brief  Update関数
- *  @param[in]  tickCount   現在時刻(tickCount)
+ *  @param[in]  tickCount   経過時間[ミリ秒]
  *  @param[out] o_message   メッセージ(格納先)
  */
 void TradeAssistor::Update(int64_t tickCount, UpdateMessage& o_message)

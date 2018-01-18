@@ -11,7 +11,6 @@
 #include "yymmdd.h"
 
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 #include <unordered_set>
@@ -22,7 +21,6 @@ namespace trading
 {
 
 struct StockValueData;
-class StockTradingCommand;
 class TradeAssistantSetting;
 
 /*!
@@ -203,8 +201,6 @@ public:
         float64 GetBargainValue() const { return m_bargain_value; }
     };
 
-    /*!
-     */
     StockTradingTactics();
 
     /*!
@@ -218,7 +214,7 @@ public:
      */
     void SetUniqueID(int32_t id) { m_unique_id = id; }
     /*!
-     *  @brief  緊急モードを追加する
+     *  @brief  緊急モードを追加
      *  @param  emergency   緊急モード設定
      */
     void AddEmergencyMode(const Emergency& emergency);
@@ -234,10 +230,6 @@ public:
     void AddRepaymentOrder(const RepOrder& order);
 
     /*!
-     */
-    typedef std::function<void(const StockTradingCommandPtr&)> EnqueueFunc;
-
-    /*!
      *  @brief  戦略解釈
      *  @param  investments     現在取引所種別
      *  @param  now_time        現在時分秒
@@ -247,6 +239,7 @@ public:
      *  @param  script_mng      外部設定(スクリプト)管理者
      *  @param  enqueue_func    命令をキューに入れる関数
      */
+    typedef std::function<void(const StockTradingCommandPtr&)> EnqueueFunc;
     void Interpret(eStockInvestmentsType investments,
                    const garnet::HHMMSS& now_time,
                    const garnet::HHMMSS& sec_time,
@@ -262,4 +255,4 @@ private:
     std::vector<RepOrder> m_repayment;  //!< 返済注文リスト
 };
 
-} // trading
+} // namespace trading

@@ -43,13 +43,7 @@ public:
                                 const RcvResponseStockOrder&,
                                 const std::wstring& sv_date)> OrderCallback;
 
-    /*!
-     *  @brief
-     */
     SecuritiesSession();
-    /*!
-     *  @brief
-     */
     virtual ~SecuritiesSession();
 
 
@@ -72,6 +66,7 @@ public:
                                         const RegisterMonitoringCodeCallback& callback) = 0;
     /*!
      *  @brief  保有株式情報取得
+     *  @param  callback    コールバック
      */
     virtual void GetStockOwned(const GetStockOwnedCallback& callback) = 0;
 
@@ -82,10 +77,12 @@ public:
     virtual void UpdateValueData(const UpdateValueDataCallback& callback) = 0;
     /*!
      *  @brief  約定情報取得取得
+     *  @param  callback    コールバック
      */
     virtual void UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback) = 0;
     /*!
      *  @brief  余力取得
+     *  @param  callback    コールバック
      */
     virtual void UpdateMargin(const UpdateMarginCallback& callback) = 0;
 
@@ -133,8 +130,8 @@ public:
     virtual int64_t GetLastAccessTime() const = 0;
 
 private:
-    SecuritiesSession(const SecuritiesSession&&);
     SecuritiesSession(const SecuritiesSession&);
+    SecuritiesSession(SecuritiesSession&&);
     SecuritiesSession& operator= (const SecuritiesSession&);
 };
 

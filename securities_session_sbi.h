@@ -46,6 +46,7 @@ public:
                                 const RegisterMonitoringCodeCallback& callback) override;
     /*!
      *  @brief  保有株式情報取得
+     *  @param  callback    コールバック
      */
     void GetStockOwned(const GetStockOwnedCallback& callback) override;
 
@@ -56,10 +57,12 @@ public:
     void UpdateValueData(const UpdateValueDataCallback& callback) override;
     /*!
      *  @brief  約定情報取得取得
+     *  @param  callback    コールバック
      */
     void UpdateExecuteInfo(const UpdateStockExecInfoCallback& callback) override;
     /*!
      *  @brief  余力取得
+     *  @param  callback    コールバック
      */
     void UpdateMargin(const UpdateMarginCallback& callback) override;
 

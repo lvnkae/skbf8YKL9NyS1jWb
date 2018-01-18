@@ -139,7 +139,7 @@ private:
     int32_t m_tactics_id;   //!< 所属戦略ID
 
     StockTradingCommand(const StockTradingCommand&);
-    StockTradingCommand(const StockTradingCommand&&);
+    StockTradingCommand(StockTradingCommand&&);
     StockTradingCommand& operator= (const StockTradingCommand&);
 };
 
@@ -250,7 +250,6 @@ public:
     /*!
      *  @brief  コマンド作成(発注[売買])
      *  @param  investments 取引所種別
-     *  @param  type        命令種別
      *  @param  code        銘柄コード
      *  @param  tactics_id  戦略ID
      *  @param  group_id    戦略グループID
@@ -295,14 +294,12 @@ public:
     /*!
      *  @brief  コマンド作成(発注[信用返済])
      *  @param  investments 取引所種別
-     *  @param  type        命令種別
      *  @param  code        銘柄コード
      *  @param  tactics_id  戦略ID
      *  @param  group_id    戦略グループID
      *  @param  unique_id   戦略注文固有ID
      *  @param  order_type  注文種別(eOrderType)
      *  @param  order_cond  注文条件(eOrderCondition)
-     *  @param  b_leverage  信用取引フラグ
      *  @param  number      注文株数
      *  @param  value       注文価格
      *  @param  bg_date     建日

@@ -8,16 +8,10 @@
 namespace trading
 {
 
-/*!
- *  @brief
- */
 TradingMachine::TradingMachine()
 {
 }
 
-/*!
- *  @brief
- */
 TradingMachine::~TradingMachine()
 {
 }

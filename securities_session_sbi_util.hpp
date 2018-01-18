@@ -483,8 +483,8 @@ void BuildRepaymenLeverageOrderFormdata(const std::string& caIQ,
     if (regist_id > 0) {
         utility_http::AddFormDataParamToString(PARAM_NAME_REGIST_ID, std::to_wstring(regist_id), form_data);
     }
-    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_BRAND, std::to_wstring(order.m_code.GetCode()), form_data);
-    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.m_code.GetCode()), form_data);
+    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_BRAND, std::to_wstring(order.GetCode()), form_data);
+    utility_http::AddFormDataParamToString(PARAM_NAME_ORDER_STOCK_CODE, std::to_wstring(order.GetCode()), form_data);
     utility_http::AddFormDataParamToString(L"open_market", GetSbiInvestimentsCode(order.m_investments), form_data);
     utility_http::AddFormDataParamToString(L"sum_quantity", std::to_wstring(order.m_number), form_data);
     BuildOrderValueToFormDataString(order.m_value, order.m_condition, form_data);
