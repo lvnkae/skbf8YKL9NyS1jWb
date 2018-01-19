@@ -124,6 +124,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                 prevTickCount = tickCount;
             }
 		}
+        Sleep(1);
 	}
 
 	return static_cast<int>(msg.wParam);
