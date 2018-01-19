@@ -902,7 +902,7 @@ public:
             // 約定通知
             OutputExecMessage(itOrder->second, ex_info);
             // 全部約定
-            if (!ex_info.m_b_complete) {
+            if (ex_info.m_b_complete) {
                 // 現物買/新規信用売買ならば「約定済み注文」へ登録
                 const uint32_t code = ex_info.m_code;
                 const eOrderType type = ex_info.m_type;

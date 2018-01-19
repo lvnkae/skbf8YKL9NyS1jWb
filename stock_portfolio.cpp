@@ -30,9 +30,10 @@ void StockValueData::UpdateValueData(const RcvStockValueData& src, const garnet:
     if (m_value_data.empty()) {
         // ‹ó‚¾‚Á‚½‚ç‚È‚ñ‚Å‚à“o˜^
     } else {
-        // ‹ó‚Å‚È‚¯‚ê‚ÎA‘O‰ñ‚æ‚èo—ˆ‚‚ª‘‚¦‚Ä‚¢‚½ê‡‚¾‚¯“o˜^
+        // ‹ó‚Å‚È‚¯‚ê‚ÎA‘O‰ñ‚Æo—ˆ‚‚ªˆÙ‚È‚Á‚Ä‚¢‚½ê‡‚¾‚¯“o˜^
+        // ¦uˆÈãv‚É‚·‚é‚Æo—ˆ‚‚ªƒŠƒZƒbƒg‚³‚ê‚é–éŠÔPTS‚ªŽûW‚Å‚«‚È‚¢
         const stockValue& last = m_value_data.back();
-        if (last.m_volume >= src.m_volume) {
+        if (last.m_volume == src.m_volume) {
             return;
         }
     }
