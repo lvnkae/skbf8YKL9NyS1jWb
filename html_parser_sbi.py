@@ -787,7 +787,7 @@ class TodayExecInfoParser(HTMLParser):
             elif self.parse_step == 2:
                 if self.now_tag == 'div' or self.now_tag == 'b' or self.now_tag == 'font':
                     if u'お客様の株式注文はございません' in data.decode('utf-8'):
-                        print 'none'
+                        #print 'none'
                         self.parse_step = -1
             self.b_start = False
 
@@ -801,7 +801,7 @@ class TodayExecInfoParser(HTMLParser):
                         self.b_result = True
                         self.parse_step = 2
                     else:
-                        print 'pserse1->-1'
+                        #print 'pserse1->-1'
                         self.parse_step = -1
             elif self.parse_step == 3:
                 if tag == 'table':
@@ -822,8 +822,8 @@ class TodayExecInfoParser(HTMLParser):
                         if len(self.data_tag) == len(self.data_work):
                             self.AppendDataWorkToDataListWork()
                         else:
-                            print len(self.data_tag),len(self.data_work)
-                            print self.data_tag,self.data_work
+                            #print len(self.data_tag),len(self.data_work)
+                            #print self.data_tag,self.data_work
                             self.parse_step = -1 #error(タグとデータが食い違ってる)
                         self.tr_inx += 1
                     else:

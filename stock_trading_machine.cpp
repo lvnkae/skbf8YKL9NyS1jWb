@@ -114,7 +114,6 @@ private:
         {
         case SEC_SBI:
             m_pSecSession.reset(new SecuritiesSessionSbi(script_mng));
-            m_pStarter.reset(new StockTradingStarterSbi(m_pSecSession, m_pTwSession, script_mng));
             m_sequence = SEQ_READY;
             break;
         default:
@@ -194,6 +193,7 @@ private:
         switch (m_securities)
         {
         case SEC_SBI:
+            m_pStarter.reset(new StockTradingStarterSbi(m_pSecSession, m_pTwSession, script_mng));
             m_pOrderingManager.reset(new StockOrderingManager(m_pSecSession, m_pTwSession, script_mng));
             break;
         default:
