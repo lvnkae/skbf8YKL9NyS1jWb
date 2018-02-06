@@ -374,7 +374,7 @@ public:
                     continue;
                 }
                 if (pos.m_date == date && trade_utility::same_value(pos.m_value, value)) {
-                    dst.push_back(it->first);
+                    dst.push_back(pos_unit.first);
                 }
             }
         }
