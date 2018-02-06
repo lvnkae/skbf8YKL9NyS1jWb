@@ -40,7 +40,8 @@ def splitBySPCRLF(src):
             div_sp = str_div_lf.split(' ')
             for str_div_sp in div_sp:
                 if str_div_sp:
-                    ret_str.append(str_div_sp)
+                    if not str_div_sp == '\r':
+                        ret_str.append(str_div_sp)
     return ret_str
 
 #   @brief  listからkeyを探してindexを返す
