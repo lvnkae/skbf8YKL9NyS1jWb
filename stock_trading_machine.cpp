@@ -73,6 +73,7 @@ private:
     int64_t m_last_monitoring_tick;             //!< 最後に監視銘柄情報(価格データ)を要求したtickCount
     int64_t m_last_req_exec_info_tick;          //!< 最後に当日約定情報を要求したtickCount
     bool m_lock_update_margin;                  //!< 余力更新ロックフラグ
+    bool m_lock_update_order;                   //!< 発注ロックフラグ(トラブル発生時用)
 
     const int64_t m_monitoring_interval_ms;     //!< 監視銘柄情報(価格データ)更新間隔[ミリ秒]
     const int64_t m_exec_info_interval_ms;      //!< 当日約定情報更新間隔[ミリ秒]
@@ -356,8 +357,10 @@ private:
                     }
                 }
                 // 発注管理定期更新
-                m_pOrderingManager->Update(tickCount, now_tm, now_tt.m_hhmmss,
-                                           investments_type, m_aes_pwd_sub, script_mng);
+                if (!m_lock_update_order) {
+                    m_pOrderingManager->Update(tickCount, now_tm, now_tt.m_hhmmss,
+                                               investments_type, m_aes_pwd_sub, script_mng);
+                }
             }
         }
 
@@ -461,6 +464,7 @@ public:
     , m_last_monitoring_tick(0)
     , m_last_req_exec_info_tick(0)
     , m_lock_update_margin(false)
+    , m_lock_update_order(false)
     , m_monitoring_interval_ms(
         garnet::utility_datetime::ToMiliSecondsFromSecond(
             script_mng.GetStockMonitoringIntervalSecond()))
@@ -499,6 +503,14 @@ public:
         m_aes_pwd_sub.Encrypt(m_rand_gen, cv.to_bytes(pwd_sub));
         // 休場チェックへ
         m_sequence = SEQ_CLOSED_CHECK;
+    }
+
+    /*!
+     *  @brief  売買一時停止
+     */
+    void Pause()
+    {
+        m_lock_update_order = true;
     }
 
     /*!
@@ -574,6 +586,14 @@ bool StockTradingMachine::IsReady() const
 void StockTradingMachine::Start(int64_t tickCount, const std::wstring& uid, const std::wstring& pwd, const std::wstring& pwd_sub)
 {
     m_pImpl->Start(uid, pwd, pwd_sub);
+}
+
+/*!
+ *  @brief  売買一時停止
+ */
+void StockTradingMachine::Pause()
+{
+    m_pImpl->Pause();
 }
 
 /*!

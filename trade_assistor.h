@@ -41,6 +41,12 @@ public:
     void Start(int64_t tickCount, const std::wstring& uid, const std::wstring& pwd, const std::wstring& pwd_sub);
 
     /*!
+     *  @brief  ”„”ƒˆê’â~
+     *  @note   ‰½‚©‚ ‚Á‚½‚çŠO•”‚©‚ç”„”ƒ‚ğ~‚ß‚Ä‚µ‚Ü‚¤
+     */
+    void Pause();
+
+    /*!
      *  @brief  UpdateŠÖ”
      *  @param[in]  tickCount   Œo‰ßŠÔ[ƒ~ƒŠ•b]
      *  @param[out] o_message   ƒƒbƒZ[ƒW(Ši”[æ)

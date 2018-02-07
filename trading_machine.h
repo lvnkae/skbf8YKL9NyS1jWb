@@ -34,6 +34,11 @@ public:
     virtual void Start(int64_t tickCount, const std::wstring& uid, const std::wstring& pwd, const std::wstring& pwd_sub) = 0;
 
     /*!
+     *  @brief  売買一時停止
+     */
+    virtual void Pause() = 0;
+
+    /*!
      *  @brief  Update関数
      *  @param[in]  tickCount   経過時間[ミリ秒]
      *  @param[in]  script_mng  外部設定(スクリプト)管理者

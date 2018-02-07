@@ -44,6 +44,10 @@ public:
                const std::wstring& uid,
                const std::wstring& pwd,
                const std::wstring& pwd_sub) override;
+    /*!
+     *  @brief  ”„”ƒˆê’â~
+     */
+    void Pause() override;
 
     /*!
      *  @brief  UpdateŠÖ”

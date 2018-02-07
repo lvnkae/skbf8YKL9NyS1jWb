@@ -107,6 +107,16 @@ public:
     }
 
     /*!
+     *  @brief  ”„”ƒˆê’â~
+     */
+    void Pause()
+    {
+        if (m_pMachine) {
+            m_pMachine->Pause();
+        }
+    }
+
+    /*!
      *  @brief  UpdateŠÖ”
      *  @param[in]  tickCount   Œo‰ßŠÔ[ƒ~ƒŠ•b]
      *  @param[out] o_message   ƒƒbƒZ[ƒW(Ši”[æ)
@@ -162,6 +172,14 @@ bool TradeAssistor::IsReady() const
 void TradeAssistor::Start(int64_t tickCount, const std::wstring& uid, const std::wstring& pwd, const std::wstring& pwd_sub)
 {
     m_pImpl->Start(tickCount, uid, pwd, pwd_sub);
+}
+
+/*!
+ *  @brief  ”„”ƒˆê’â~
+ */
+void TradeAssistor::Pause()
+{
+    m_pImpl->Pause();
 }
 
 /*!
