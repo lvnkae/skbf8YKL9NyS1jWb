@@ -116,6 +116,9 @@ private:
     //! 保有銘柄管理
     StockHoldingsKeeper m_holdings;
 
+    //! 約定情報受信まで発注処理ロックする
+    bool m_b_lock_odmng_and_wait_execinfo;
+
     //! 命令リスト
     std::list<StockTradingCommandPtr> m_command_list;
     //! 緊急モード状態
@@ -247,6 +250,10 @@ private:
             }
             // 注文待ち解除(成否問わない)
             m_wait_order.pop_back();
+            // 失敗してたら次の約定情報取得まで発注処理をロックする
+            if (!b_result) {
+                m_b_lock_odmng_and_wait_execinfo = true;
+            }
         }
     }
 
@@ -395,6 +402,10 @@ private:
     void EntryCommand(const StockTradingCommandPtr& command_ptr, 
                       eStockInvestmentsType investments)
     {
+        if (m_b_lock_odmng_and_wait_execinfo) {
+            return;
+        }
+
         StockTradingCommand& command(*command_ptr);
         const int32_t tactics_id = command.GetTacticsID();
         const uint32_t code = command.GetCode();
@@ -450,7 +461,7 @@ private:
                 // 保有銘柄チェック・全株指定展開・建日無指定展開
                 if (odtype == ORDER_REPBUY || odtype == ORDER_REPSELL) {
                     // 信用返済売買
-                    const bool b_sell = (odtype == ORDER_REPSELL);
+                    const bool b_sell = (odtype == ORDER_REPBUY); // 返買ならば売建玉を調べる
                     const garnet::YYMMDD bg_date(std::move(command.GetRepLevBargainDate()));
                     if (!bg_date.empty()) {
                         // 建玉指定返済
@@ -608,6 +619,10 @@ private:
             // 発注命令じゃない(error)
             return false;
         }
+        if (m_b_lock_odmng_and_wait_execinfo) {
+            // 次約定情報取得までロック
+            return false;
+        }
 
         const StockOrder order(std::move(command.GetOrder()));
         const StockCode& s_code(order.RefCode());
@@ -641,10 +656,11 @@ private:
             {
                 const garnet::YYMMDD bg_date(std::move(command.GetRepLevBargainDate()));
                 const float64 bg_value = command.GetRepLevBargainValue();
+                const bool b_sell = order.m_type == ORDER_REPBUY; // 返買ならば売建玉を調べる
                 if (!m_holdings.CheckPosition(s_code,
                                               bg_date,
                                               bg_value,
-                                              order.m_type == ORDER_REPSELL,
+                                              b_sell,
                                               order.GetNumber())) {
                     // 株不足(ラグで起こり得る)
                     return false;
@@ -708,10 +724,12 @@ public:
     , m_monitoring_brand()
     , m_monitoring_data()
     , m_holdings()
+    , m_b_lock_odmng_and_wait_execinfo(false)
     , m_command_list()
     , m_emergency_state()
     , m_wait_order()
     , m_server_order()
+    , m_exec_order()
     , m_server_order_id()
     , m_investments(INVESTMENTS_NONE)
     , m_tick_count(0)
@@ -854,6 +872,8 @@ public:
      */
     void UpdateExecInfo(const std::vector<StockExecInfoAtOrder>& rcv_info)
     {
+        m_b_lock_odmng_and_wait_execinfo = false;
+
         // 約定差分(前回更新後に約定した情報)を得る
         std::vector<StockExecInfoAtOrder> diff_info;
         m_holdings.GetExecInfoDiff(rcv_info, diff_info);
