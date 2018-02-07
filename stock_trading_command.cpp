@@ -167,8 +167,7 @@ StockTradingCommand_ControllOrder::StockTradingCommand_ControllOrder(const Stock
                             src_command.GetOrderUniqueID())
 , m_order_id(order_id)
 {
-    // 株数以外をコピー
-    CopyStockOrderWithoutNumber(src_command);
+    m_order = std::move(src_command.GetOrder());
     m_order.m_type = order_type;
 }
 
