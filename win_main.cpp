@@ -116,6 +116,21 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                 TranslateMessage(&msg);  //キーボード利用を可能にする
                 DispatchMessage(&msg);  //制御をWindowsに戻す
             }
+            {
+                HWND hWnd = msg.hwnd;
+                HWND hwnd_btn_read(GetDlgItem(hWnd, IDC_BUTTON_READSETTING));
+                HWND hwnd_btn_start(GetDlgItem(hWnd, IDC_BUTTON_STARTTRADE));
+                HWND hwnd_btn_pause(GetDlgItem(hWnd, IDC_BUTTON_PAUSETRADE));
+                if (hwnd_btn_read && hwnd_btn_start && hwnd_btn_pause) {
+                    if (!IsWindowEnabled(hwnd_btn_read) &&
+                        !IsWindowEnabled(hwnd_btn_start) &&
+                        !IsWindowEnabled(hwnd_btn_pause)) {
+                        if (g_WinMain.m_TradeAssistor.lock()->IsReady()) {
+                            EnableWindow(hwnd_btn_start, TRUE);
+                        }
+                    }
+                }
+            }
         } else {
             // 最速30フレームで動作させてみる
             int64_t tickCount = garnet::utility_datetime::GetTickCountGeneral();
@@ -238,10 +253,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDC_BUTTON_READSETTING:
                 {
                     HWND hwnd_btn_read(GetDlgItem(hWnd, IDC_BUTTON_READSETTING));
-                    HWND hwnd_btn_start(GetDlgItem(hWnd, IDC_BUTTON_STARTTRADE));
-                    if (hwnd_btn_read && hwnd_btn_start) {
+                    if (hwnd_btn_read) {
                         EnableWindow(hwnd_btn_read, FALSE);
-                        EnableWindow(hwnd_btn_start, TRUE);
                         g_WinMain.m_TradeAssistor.lock()->ReadSetting();
                     }
                 }
