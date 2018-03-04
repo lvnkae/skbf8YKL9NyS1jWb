@@ -288,7 +288,7 @@ public:
                 }
 
                 // ìoò^é¿çs
-                const std::wstring& url(std::move(std::wstring(URL_BK_BASE) + URL_BK_STOCKENTRYEXECUTE));
+                const std::wstring url(std::move(std::wstring(URL_BK_BASE) + URL_BK_STOCKENTRYEXECUTE));
                 web::http::http_request request(web::http::methods::POST);
                 utility_http::SetHttpCommonHeaderKeepAlive(url, m_cookies_gr, std::wstring(URL_BK_BASE)+URL_BK_STOCKENTRYCONFIRM, request);
                 BuildMonitoringCodeFormData(m_use_pf_number_monitoring, m_max_code_register, monitoring_code, investments_type, regist_id, request);
