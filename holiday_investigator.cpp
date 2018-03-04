@@ -40,7 +40,7 @@ public:
      */
     void Investigate(const CallBackFunction& function)
     {
-        if (!m_callback._Empty()) {
+        if (m_callback) {
             return; // •¡”‰ñ‚ÍŒÄ‚×‚È‚¢(error)
         }
         m_callback = function;

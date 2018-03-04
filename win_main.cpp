@@ -41,10 +41,10 @@ public:
 };
 
 // 定数
-const int32_t IDC_BUTTON_READSETTING = 1000; //!< 子ウィンドウID：設定読み込みボタン
-const int32_t IDC_BUTTON_STARTTRADE = 1001;  //!< 子ウィンドウID：トレード開始
-const int32_t IDC_BUTTON_PAUSETRADE = 1002;  //!< 子ウィンドウID：売買一時停止
-const int32_t IDC_LOGDISPLAY = 1003;         //!< 子ウィンドウID：ログ表示
+const int64_t IDC_BUTTON_READSETTING = 1000; //!< 子ウィンドウID：設定読み込みボタン
+const int64_t IDC_BUTTON_STARTTRADE = 1001;  //!< 子ウィンドウID：トレード開始
+const int64_t IDC_BUTTON_PAUSETRADE = 1002;  //!< 子ウィンドウID：売買一時停止
+const int64_t IDC_LOGDISPLAY = 1003;         //!< 子ウィンドウID：ログ表示
 // 定数：ボタン配置パラメータ
 const int32_t BUTTON_WIDTH = 256;
 const int32_t BUTTON_HEIGHT = 30;
