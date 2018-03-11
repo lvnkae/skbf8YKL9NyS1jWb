@@ -178,6 +178,22 @@ public:
     }
 
     /*!
+     *  @brief  サーバ時刻を得る
+     *  @param  callback    コールバック
+     */
+    void GetServerDateTime(const ServerDateTimeCallback& callback)
+    {
+        web::http::http_request request(web::http::methods::GET);
+        utility_http::SetHttpCommonHeaderSimple(request);
+        // mobileサイトが拠点
+        web::http::client::http_client http_client(URL_BK_BASE);
+        http_client.request(request).then([callback](web::http::http_response response)
+        {
+            callback(response.headers().date());
+        });
+    }
+    
+    /*!
      *  @breif  ログイン
      *  @param  uid
      *  @param  pwd
@@ -911,6 +927,15 @@ SecuritiesSessionSbi::SecuritiesSessionSbi(const TradeAssistantSetting& script_m
  */
 SecuritiesSessionSbi::~SecuritiesSessionSbi()
 {
+}
+
+/*!
+ *  @brief  サーバ時刻を得る
+ *  @param  callback    コールバック
+ */
+void SecuritiesSessionSbi::GetServerDateTime(const ServerDateTimeCallback& callback)
+{
+    m_pImpl->GetServerDateTime(callback);
 }
 
 /*!

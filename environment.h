@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include "google/google_api_config_fwd.h"
 #include "python/python_config_fwd.h"
 #include "twitter/twitter_config_fwd.h"
 
@@ -35,6 +36,10 @@ public:
     static std::weak_ptr<const Environment> GetInstance() { return m_pInstance; }
 
     /*!
+     *  @brief  GoogleCalendarAPI設定を得る
+     */
+    static const garnet::GoogleCalendarAPIConfigRef GetGoogleCarendarAPIConfig();
+    /*!
      *  @brief  python設定を得る
      */
     static const garnet::python_config_ref GetPythonConfig();
@@ -61,10 +66,12 @@ private:
 
     //! トレーディングスクリプト名
     std::string m_trading_script;
+    //! GoogleCalendarAPI設定
+    garnet::GoogleCalendarAPIConfigPtr m_google_calendar_api_config;
     //! python設定  
-    std::shared_ptr<garnet::python_config> m_python_config;
+    garnet::python_config_ptr m_python_config;
     //! twitter設定  
-    std::shared_ptr<garnet::twitter_config> m_twitter_config;
+    garnet::twitter_config_ptr m_twitter_config;
     //! 自身の弱参照
     static std::weak_ptr<Environment> m_pInstance;
 };

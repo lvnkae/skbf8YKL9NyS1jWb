@@ -25,6 +25,7 @@ struct RcvResponseStockOrder;
 class SecuritiesSession
 {
 public:
+    typedef std::function<void (const std::wstring& sv_date)> ServerDateTimeCallback;
     typedef std::function<void (bool b_result, bool, bool,
                                 const std::wstring& sv_date)> LoginCallback;
     typedef std::function<void (bool b_result,
@@ -46,6 +47,12 @@ public:
     SecuritiesSession();
     virtual ~SecuritiesSession();
 
+
+    /*!
+     *  @brief  サーバ時刻を得る
+     *  @param  callback    コールバック
+     */
+    virtual void GetServerDateTime(const ServerDateTimeCallback& callback) = 0;
 
     /*!
      *  @breif  ログイン

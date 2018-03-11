@@ -27,6 +27,12 @@ public:
     ~SecuritiesSessionSbi();
 
     /*!
+     *  @brief  サーバ時刻を得る
+     *  @param  callback    コールバック
+     */
+    void GetServerDateTime(const ServerDateTimeCallback& callback) override;
+    
+    /*!
      *  @breif  ログイン
      *  @param  uid
      *  @param  pwd

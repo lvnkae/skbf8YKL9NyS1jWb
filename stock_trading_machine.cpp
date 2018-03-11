@@ -6,6 +6,7 @@
 #include "stock_trading_machine.h"
 #include "trade_debug.h"
 
+#include "environment.h"
 #include "securities_session_sbi.h"
 #include "stock_ordering_manager.h"
 #include "stock_trading_starter_sbi.h"
@@ -14,7 +15,7 @@
 #include "update_message.h"
 
 #include "cipher_aes.h"
-#include "holiday_investigator.h"
+#include "google/google_calendar_api.h"
 #include "random_generator.h"
 #include "twitter/twitter_session.h"
 #include "utility/utility_datetime.h"
@@ -47,11 +48,11 @@ private:
     eSequence m_sequence;   //!< シーケンス
 
     eSecuritiesType m_securities;                                   //!< 証券会社種別
-    SecuritiesSessionPtr m_pSecSession;               //!< 証券会社とのセッション
+    SecuritiesSessionPtr m_pSecSession;                             //!< 証券会社とのセッション
     garnet::TwitterSessionForAuthorPtr m_pTwSession;                //!< twitterとのセッション(メッセージ通知用)
+    std::unique_ptr<garnet::GoogleCalendarAPI> m_pCalendarAPI;      //!< カレンダーAPI
     std::unique_ptr<StockTradingStarter> m_pStarter;                //!< 株取引スターター
     std::unique_ptr<StockOrderingManager> m_pOrderingManager;       //!< 発注管理者
-    std::unique_ptr<HolidayInvestigator> m_pHolidayInvestigator;    //!< 休日調査官
 
     //!< JPX固有休業日(土日祝でなくとも休みになる日)
     std::vector<garnet::MMDD> m_jpx_holiday;
@@ -130,55 +131,62 @@ private:
     {
         m_sequence = SEQ_WAIT;
         m_wait_count_ms = 0;
-        m_pHolidayInvestigator.reset(new HolidayInvestigator());
 
-        m_pHolidayInvestigator->Investigate([this](bool b_result, bool is_holiday, const std::wstring& datetime) {
+        m_pSecSession->GetServerDateTime([this](const std::wstring& datetime) {
             using namespace garnet;
             // http関連スレッドから呼ばれるのでlock
             std::lock_guard<std::mutex> lock(m_mtx);
             //
-            garnet::sTime& sv_time(m_last_sv_time);
             UpdateServerTime(datetime);
 
 #if !defined(DEBUG_SV_TIME_OVERRIDE) || (DEBUG_SV_TIME_OVERRIDE == 0)
             const uint32_t ACCEPTABLE_DIFF_SECONDS = 10*60; // 許容される時間ズレ(10分)
             const uint32_t diff_sec
-                = utility_datetime::GetDiffSecondsFromLocalMachineTime(sv_time);
+                = utility_datetime::GetDiffSecondsFromLocalMachineTime(m_last_sv_time);
             if (ACCEPTABLE_DIFF_SECONDS < diff_sec) {
                 // 時間ズレがひどかったら余計なことはさせず、永遠に待たせる(緊急モード)
                 return;
             }
-#elif defined(DEBUG_DISABLE_HOLIDAY) && (DEBUG_DISABLE_HOLIDAY != 0)
-            sv_time.tm_wday = 1;
-            is_holiday = false;
+#endif/* */
+
+            m_pCalendarAPI->IsHoliday(m_last_sv_time, [this](bool b_result, bool is_holiday) {
+                // http関連スレッドから呼ばれるのでlock
+                std::lock_guard<std::mutex> lock(m_mtx);
+                //
+                garnet::sTime& sv_time(m_last_sv_time);
+
+#if defined(DEBUG_DISABLE_HOLIDAY) && (DEBUG_DISABLE_HOLIDAY != 0)
+                sv_time.tm_wday = 1;
+                is_holiday = false;
 #endif/* DEBUG_SV_TIME_OVERRIDE */
 
-            m_after_wait_seq = SEQ_CLOSED_CHECK;
+                m_after_wait_seq = SEQ_CLOSED_CHECK;
 
-            // 土日なら週明けに再調査(成否に関係なく)
-            if (utility_datetime::SATURDAY == sv_time.tm_wday) {
-                const int32_t AFTER_DAY = 2;
-                m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(sv_time, AFTER_DAY);
-            } else if (utility_datetime::SUNDAY == sv_time.tm_wday) {
-                const int32_t AFTER_DAY = 1;
-                m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(sv_time, AFTER_DAY);
-            } else {
-                if (b_result) {
-                    if (is_holiday || IsJPXHoliday(sv_time)) {
-                        // 祝日または固有休業日 → 翌日再調査
-                        const int32_t AFTER_DAY = 1;
-                        m_wait_count_ms
-                            = utility_datetime::GetAfterDayLimitMS(sv_time, AFTER_DAY);
-                    } else {
-                        // 営業日 → トレードメイン前処理へ
-                        m_sequence = SEQ_PRE_TRADING;
-                    }
+                // 土日なら週明けに再調査(成否に関係なく)
+                if (utility_datetime::SATURDAY == sv_time.tm_wday) {
+                    const int32_t AFTER_DAY = 2;
+                    m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(sv_time, AFTER_DAY);
+                } else if (utility_datetime::SUNDAY == sv_time.tm_wday) {
+                    const int32_t AFTER_DAY = 1;
+                    m_wait_count_ms = utility_datetime::GetAfterDayLimitMS(sv_time, AFTER_DAY);
                 } else {
-                    // 調査失敗 → 10分後に再チャレンジ
-                    const int32_t WAIT_MINUTES = 10;
-                    m_wait_count_ms = utility_datetime::ToMiliSecondsFromMinute(WAIT_MINUTES);
+                    if (b_result) {
+                        if (is_holiday || IsJPXHoliday(sv_time)) {
+                            // 祝日または固有休業日 → 翌日再調査
+                            const int32_t AFTER_DAY = 1;
+                            m_wait_count_ms
+                                = utility_datetime::GetAfterDayLimitMS(sv_time, AFTER_DAY);
+                        } else {
+                            // 営業日 → トレードメイン前処理へ
+                            m_sequence = SEQ_PRE_TRADING;
+                        }
+                    } else {
+                        // 調査失敗 → 10分後に再チャレンジ
+                        const int32_t WAIT_MINUTES = 10;
+                        m_wait_count_ms = utility_datetime::ToMiliSecondsFromMinute(WAIT_MINUTES);
+                    }
                 }
-            }
+            });
         });
     }
 
@@ -446,9 +454,9 @@ public:
     , m_securities(script_mng.GetSecuritiesType())
     , m_pSecSession()
     , m_pTwSession(tw_session)
+    , m_pCalendarAPI(new garnet::GoogleCalendarAPI(Environment::GetGoogleCarendarAPIConfig()))
     , m_pStarter()
     , m_pOrderingManager()
-    , m_pHolidayInvestigator()
     , m_jpx_holiday()
     , m_timetable()
     , m_rand_gen()

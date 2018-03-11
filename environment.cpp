@@ -5,6 +5,7 @@
 */
 #include "environment.h"
 
+#include "google/google_api_config.h"
 #include "python/python_config.h"
 #include "twitter/twitter_config.h"
 
@@ -31,6 +32,19 @@ std::shared_ptr<Environment> Environment::Create()
         _instance->initialize();
 
         return _instance;
+    }
+}
+
+/*!
+ *   @brief  GoogleCalendarAPIê›íËÇìæÇÈ(static)
+ */
+const garnet::GoogleCalendarAPIConfigRef Environment::GetGoogleCarendarAPIConfig()
+{
+    std::shared_ptr<const Environment> p = m_pInstance.lock();
+    if (nullptr != p) {
+        return p->m_google_calendar_api_config;
+    } else {
+        return garnet::GoogleCalendarAPIConfigRef();
     }
 }
 
@@ -77,6 +91,10 @@ void Environment::initialize()
     boost::property_tree::ptree pt;
     boost::property_tree::read_ini("trade_assistant.ini", pt);
 
+    {
+        boost::optional<std::string> str = pt.get_optional<std::string>("Initialize.GoogleAPI");
+        m_google_calendar_api_config.reset(new garnet::GoogleCalendarAPIConfig(str.get()));
+    }
     {
         boost::optional<std::string> str = pt.get_optional<std::string>("Initialize.Python");
         m_python_config.reset(new garnet::python_config(str.get()));
