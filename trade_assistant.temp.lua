@@ -99,9 +99,9 @@ StockTactics = {
                 Condition = {
                     Type = "Formula", -- lua関数で判定
                     Formula = (function(v, high, low, yesterday)
-                                    -- 現値がlimitを下回ったら発注
+                                    -- 現値がlimitを下回ったら発注(v/high/lowは未約定なら-1)
                                     limit = 888
-                                    if (v < limit) then
+                                    if 0 < v and v < limit then
                                         return true
                                     else
                                         return false
@@ -129,9 +129,9 @@ StockTactics = {
                 Condition = {
                     Type = "Formula", -- lua関数で判定
                     Formula = (function(v, high, low, yesterday)
-                                -- 現値がlimitを下回ったら発注
+                                -- 現値がlimitを下回ったら発注(v/high/lowは未約定なら-1)
                                 limit = 777
-                                if (v < limit) then
+                                if 0 < v and v < limit then
                                     return true
                                 else
                                     return false
@@ -151,15 +151,25 @@ StockTactics = {
                             diff = 50
                             return high + diff
                         end),
+                -- 建玉指定(無指定なら建日古い順→建値(買昇/売降)順)
+                Bargain = {
+                    Date = '2018/02/14',
+                    Value = 666.0,
+                },
                 -- 返済株数(負数なら全部)
                 Quantity = -1,
                 -- 返済条件
                 Condition = {
+                    -- 発注時間指定
+                    Period = {
+                        Start = '14:00:00',
+                        End   = '14:55:00',
+                    },
                     Order = "UNPROMOTED", -- 注文条件(OPENING:寄り/CLOSE:引け/UNPROMOTED:不成)
                     Type = "Formula", -- lua関数で判定
                     Formula = (function(v, high, low, yesterday)
                                 -- 現値がlimitを上回ったら発注
-                                limit = 666
+                                limit = 999
                                 if (v >= limit) then
                                     return true
                                 else

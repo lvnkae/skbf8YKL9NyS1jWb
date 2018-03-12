@@ -67,6 +67,12 @@ bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& now_time,
         return false; // 価格データがなかったら判定しない
     }
 
+    if (m_b_period) {
+        if (now_time < m_period_start || m_period_end < now_time) {
+            return false;   // 指定時間外
+        }
+    }
+
     switch (m_type)
     {
     case VALUE_GAP:
@@ -125,15 +131,14 @@ bool StockTradingTactics::Trigger::Judge(const garnet::HHMMSS& now_time,
     case SCRIPT_FUNCTION:
         {
             const auto& latest = valuedata.m_value_data.back();
-            // 出来高なしなら判定しない(データ先頭のみ時間記録用に存在し得る)
-            if (latest.m_volume > 0) {
-                float64 lvalue = latest.m_value;
-                return script_mng.CallJudgeFunction(m_signed_param,
-                                                    lvalue,
-                                                    valuedata.m_high,
-                                                    valuedata.m_low,
-                                                    valuedata.m_close);
-            }
+            // 出来高なし(データ先頭のみ時間記録用に存在し得る)でも判定する
+            // ※value/hight/lowは未取得なのは関数側で弾くことにする
+            float64 lvalue = latest.m_value;
+            return script_mng.CallJudgeFunction(m_signed_param,
+                                                lvalue,
+                                                valuedata.m_high,
+                                                valuedata.m_low,
+                                                valuedata.m_close);
         }
     }
 

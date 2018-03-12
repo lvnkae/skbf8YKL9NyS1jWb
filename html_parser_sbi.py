@@ -915,13 +915,13 @@ class StockOrderRegistIDParser(RegistIDParser):
                 u8data = data.decode('utf-8')
                 if self.title_str in u8data:
                     # 括弧の全/半角に表記ゆれがある…
-                    if u'買)' in u8data or u'買）' in u8data:
+                    if u'買)' in u8data or u'買）' in u8data or u'買PTS)' in u8data:
                         self.b_ok = True
             elif '売' == self.order_tag or '返売' == self.order_tag:
                 u8data = data.decode('utf-8')
                 if self.title_str in u8data:
                     # 括弧の全/半角に表記ゆれがある…
-                    if u'売)' in u8data or u'売）' in u8data:
+                    if u'売)' in u8data or u'売）' in u8data or u'売PTS)' in u8data:
                         self.b_ok = True
             elif '訂正' == self.order_tag:
                 if u'注文訂正' in data.decode('utf-8'):
@@ -1262,6 +1262,13 @@ def debugOutputShiftJisHTMLToFile(html_sjis, filename):
     f.write(html_sjis.decode('cp932').encode('utf-8'))
     f.close()
 
+#   @brief  [Debug]UTF8で送られてきたhtmlをそのままファイル出力する
+#   @param  html_u8     response(html/UTF-8)
+def debugOutputHTMLToFile(html_u8, filename):
+
+    f = open(filename, 'w')
+    f.write(html_u8)
+    f.close()
 
 '''
 if __name__ == "__main__":

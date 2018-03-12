@@ -133,6 +133,27 @@ private:
             return;
         }
 
+        {
+            if (accessor.OpenChildTable("Period") >= 0) {
+                bool b_pd_error = false;
+                //
+                std::string start_str;
+                if (!accessor.GetTableParam("Start", start_str)) {
+                    o_message.AddErrorMessage("no Period.Start.");
+                    b_pd_error = true;
+                }
+                std::string end_str;
+                if (!accessor.GetTableParam("End", end_str)) {
+                    o_message.AddErrorMessage("no Period.End.");
+                    b_pd_error = true;
+                }
+                if (!b_pd_error) {
+                    trigger.AddPeriod(start_str, end_str);
+                }
+            }
+            accessor.CloseTable();
+        }
+
         add_func(trigger);
     }
     /*!

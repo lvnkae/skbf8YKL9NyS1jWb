@@ -8,14 +8,13 @@
 #include "stock_trading_command_fwd.h"
 #include "trade_define.h"
 
+#include "hhmmss.h"
 #include "yymmdd.h"
 
 #include <functional>
 #include <string>
 #include <vector>
 #include <unordered_set>
-
-namespace garnet { struct HHMMSS; }
 
 namespace trading
 {
@@ -46,14 +45,20 @@ public:
     class Trigger
     {
     private:
-        eTriggerType m_type;       //!< タイプ
-        float32 m_float_param;     //!< フリーパラメータ(32bit浮動小数点)
-        int32_t m_signed_param;    //!< フリーパラメータ(32bit符号付き)
+        eTriggerType m_type;    //!< タイプ
+        float32 m_float_param;  //!< フリーパラメータ(32bit浮動小数点)
+        int32_t m_signed_param; //!< フリーパラメータ(32bit符号付き)
+        bool m_b_period;        //!< 時間指定フラグ
+        garnet::HHMMSS m_period_start;  //!< 期間始点
+        garnet::HHMMSS m_period_end;    //!< 期間終点
     public:
         Trigger()
         : m_type(eTriggerType::TRRIGER_NONE)
         , m_float_param(0.f)
         , m_signed_param(0)
+        , m_b_period(false)
+        , m_period_start()
+        , m_period_end()
         {
         }
 
@@ -74,11 +79,18 @@ public:
             m_signed_param =func_ref;
         }
 
-        void Copy(const Trigger& src)
+        /*!
+         *  @param  start   始点時刻文字列(HH:MM:SS)
+         *  @param  end     終点時刻文字列(同)
+         */
+        void AddPeriod(const std::string& start, const std::string& end)
         {
-            *this = src;
+            m_b_period = true;
+            m_period_start = garnet::HHMMSS::Create(start);
+            m_period_end = garnet::HHMMSS::Create(end);
         }
 
+        void copy(const Trigger& src) { *this = src; }
         bool empty() const { return m_type == TRRIGER_NONE; }
 
         /*!
@@ -111,7 +123,7 @@ public:
         }
 
         void AddTargetGroupID(int32_t group_id) { m_group.insert(group_id); }
-        void SetCondition(const Trigger& trigger) { Copy(trigger); }
+        void SetCondition(const Trigger& trigger) { copy(trigger); }
         const std::unordered_set<int32_t>& RefTargetGroup() const { return m_group; }
     };
 
@@ -151,7 +163,7 @@ public:
         {
         }
 
-        void SetTrigger(const Trigger& trigger) { Copy(trigger); }
+        void SetTrigger(const Trigger& trigger) { copy(trigger); }
 
         void SetUniqueID(int32_t unique_id) { m_unique_id = unique_id; }
         void SetGroupID(int32_t group_id) { m_group_id = group_id; }
