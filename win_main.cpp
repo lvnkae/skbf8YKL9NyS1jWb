@@ -44,15 +44,18 @@ public:
 const int64_t IDC_BUTTON_READSETTING = 1000; //!< 子ウィンドウID：設定読み込みボタン
 const int64_t IDC_BUTTON_STARTTRADE = 1001;  //!< 子ウィンドウID：トレード開始
 const int64_t IDC_BUTTON_PAUSETRADE = 1002;  //!< 子ウィンドウID：売買一時停止
-const int64_t IDC_LOGDISPLAY = 1003;         //!< 子ウィンドウID：ログ表示
+const int64_t IDC_BUTTON_OUTPUTLOG = 1003;   //!< 子ウィンドウID：ログ強制出力
 // 定数：ボタン配置パラメータ
 const int32_t BUTTON_WIDTH = 256;
 const int32_t BUTTON_HEIGHT = 30;
-const int32_t BUTTON_INTERVAL = 20;
+const int32_t BUTTON_INTERVAL_X = 20;
+const int32_t BUTTON_INTERVAL_Y = 5;
 const int32_t BUTTON_POS_X_READSETTING = 10;
-const int32_t BUTTON_POS_X_STARTTRADE = BUTTON_POS_X_READSETTING + BUTTON_WIDTH + BUTTON_INTERVAL;
-const int32_t BUTTON_POS_X_PAUSETRADE = BUTTON_POS_X_STARTTRADE + BUTTON_WIDTH + BUTTON_INTERVAL;
+const int32_t BUTTON_POS_X_STARTTRADE = BUTTON_POS_X_READSETTING + BUTTON_WIDTH + BUTTON_INTERVAL_X;
+const int32_t BUTTON_POS_X_PAUSETRADE = BUTTON_POS_X_STARTTRADE + BUTTON_WIDTH + BUTTON_INTERVAL_X;
+const int32_t BUTTON_POS_X_OUTPUTLOG = BUTTON_POS_X_PAUSETRADE;
 const int32_t BUTTON_POS_Y = 10;
+const int32_t BUTTON_POS_Y_OUTPUTLOG = BUTTON_POS_Y + BUTTON_HEIGHT + BUTTON_INTERVAL_Y;
 // 定数：接続情報入力
 const int32_t TEXT_LEN_IDENTIFY = 64;
 const int32_t TEXT_BUFF_LEN_IDENTIFY = TEXT_LEN_IDENTIFY+1;
@@ -236,6 +239,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                          BUTTON_POS_X_PAUSETRADE, BUTTON_POS_Y,
                          BUTTON_WIDTH, BUTTON_HEIGHT,
                          hWnd, reinterpret_cast<HMENU>(IDC_BUTTON_PAUSETRADE), g_WinMain.m_hInstance, nullptr);
+            CreateWindow(TEXT("BUTTON"),
+                         L"ログ強制出力",
+                         WS_CHILD|WS_VISIBLE|WS_DISABLED|BS_DEFPUSHBUTTON,
+                         BUTTON_POS_X_OUTPUTLOG, BUTTON_POS_Y_OUTPUTLOG,
+                         BUTTON_WIDTH, BUTTON_HEIGHT,
+                         hWnd, reinterpret_cast<HMENU>(IDC_BUTTON_OUTPUTLOG), g_WinMain.m_hInstance, nullptr);
         }
 	case WM_COMMAND:
         {
@@ -270,6 +279,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (hwnd_btn_pause) {
                         EnableWindow(hwnd_btn_pause, FALSE);
                         g_WinMain.m_TradeAssistor.lock()->Pause();
+                    }
+                }
+                break;
+            case IDC_BUTTON_OUTPUTLOG:
+                {
+                    HWND hwnd_btn_log(GetDlgItem(hWnd, IDC_BUTTON_OUTPUTLOG));
+                    if (hwnd_btn_log) {
+                        EnableWindow(hwnd_btn_log, FALSE);
+                        g_WinMain.m_TradeAssistor.lock()->OutputLog();
                     }
                 }
                 break;
@@ -340,9 +358,11 @@ INT_PTR CALLBACK InputIdentify(HWND hDlg, UINT message, WPARAM wParam, LPARAM lP
                     HWND hWnd(GetParent(hDlg));
                     HWND hwnd_btn_start(GetDlgItem(hWnd, IDC_BUTTON_STARTTRADE));
                     HWND hwnd_btn_pause(GetDlgItem(hWnd, IDC_BUTTON_PAUSETRADE));
-                    if (hWnd && hwnd_btn_start) {
+                    HWND hwnd_btn_log(GetDlgItem(hWnd, IDC_BUTTON_OUTPUTLOG));
+                    if (hWnd && hwnd_btn_start && hwnd_btn_pause && hwnd_btn_log) {
                         EnableWindow(hwnd_btn_start, FALSE);
                         EnableWindow(hwnd_btn_pause, TRUE);
+                        EnableWindow(hwnd_btn_log, TRUE);
                         WCHAR text_buf[TEXT_BUFF_LEN_IDENTIFY];
                         GetDlgItemText(hDlg, IDC_EDIT_USERID, text_buf, static_cast<int>(sizeof(text_buf)));
                         std::wstring uid(text_buf);

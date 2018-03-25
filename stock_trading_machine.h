@@ -50,6 +50,11 @@ public:
     void Pause() override;
 
     /*!
+     *  @brief  ログ出力
+     */
+    void OutputLog() override;
+
+    /*!
      *  @brief  Update関数
      *  @param[in]  tickCount   経過時間[ミリ秒]
      *  @param[in]  script_mng  外部設定(スクリプト)管理者

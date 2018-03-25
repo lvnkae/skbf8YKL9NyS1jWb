@@ -39,6 +39,11 @@ public:
     virtual void Pause() = 0;
 
     /*!
+     *  @brief  ログ出力
+     */
+    virtual void OutputLog() = 0;
+
+    /*!
      *  @brief  Update関数
      *  @param[in]  tickCount   経過時間[ミリ秒]
      *  @param[in]  script_mng  外部設定(スクリプト)管理者

@@ -75,6 +75,7 @@ private:
     int64_t m_last_req_exec_info_tick;          //!< 最後に当日約定情報を要求したtickCount
     bool m_lock_update_margin;                  //!< 余力更新ロックフラグ
     bool m_lock_update_order;                   //!< 発注ロックフラグ(トラブル発生時用)
+    bool m_reserve_output_log;                  //!< ログ出力予約(トラブル発生時用)
 
     const int64_t m_monitoring_interval_ms;     //!< 監視銘柄情報(価格データ)更新間隔[ミリ秒]
     const int64_t m_exec_info_interval_ms;      //!< 当日約定情報更新間隔[ミリ秒]
@@ -370,6 +371,11 @@ private:
                                                investments_type, m_aes_pwd_sub, script_mng);
                 }
             }
+        } else {
+            if (m_reserve_output_log) {
+                m_reserve_output_log = false;
+                m_pOrderingManager->OutputMonitoringLog(m_monitoring_log_dir, m_last_sv_time);
+            }
         }
 
         m_prev_tt_mode = now_mode;
@@ -473,6 +479,7 @@ public:
     , m_last_req_exec_info_tick(0)
     , m_lock_update_margin(false)
     , m_lock_update_order(false)
+    , m_reserve_output_log(false)
     , m_monitoring_interval_ms(
         garnet::utility_datetime::ToMiliSecondsFromSecond(
             script_mng.GetStockMonitoringIntervalSecond()))
@@ -519,6 +526,14 @@ public:
     void Pause()
     {
         m_lock_update_order = true;
+    }
+
+    /*!
+     *  @brief  ログ出力(予約のみ)
+     */
+    void OutputLog()
+    {
+        m_reserve_output_log = true;
     }
 
     /*!
@@ -602,6 +617,14 @@ void StockTradingMachine::Start(int64_t tickCount, const std::wstring& uid, cons
 void StockTradingMachine::Pause()
 {
     m_pImpl->Pause();
+}
+
+/*!
+ *  @brief  ログ出力
+ */
+void StockTradingMachine::OutputLog()
+{
+    m_pImpl->OutputLog();
 }
 
 /*!

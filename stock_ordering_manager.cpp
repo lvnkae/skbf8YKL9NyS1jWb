@@ -137,6 +137,8 @@ private:
     eStockInvestmentsType m_investments;
     //! 経過時間[ミリ秒]
     int64_t m_tick_count;
+    //! 最終発注応答時間(tick)
+    int64_t m_last_tick_rcv_rep_order;
 
     /*!
      *  @brief  注文約定メッセージ出力
@@ -175,6 +177,8 @@ private:
                             eStockInvestmentsType investments)
     {
         std::wstring message((b_result) ?L"注文受付" : L"注文失敗");
+        // 発注応答時間(tick)更新
+        m_last_tick_rcv_rep_order = garnet::utility_datetime::GetTickCountGeneral();
         //
         if (m_wait_order.empty()) {
             // なぜか注文待ちがない(error)
@@ -604,10 +608,12 @@ private:
      *  @param  command     命令
      *  @param  investments 取引所種別
      *  @param  aes_pwd
+     *  @param  tickCount   経過時間[ミリ秒]
      */
     bool IssueOrderCore(const StockTradingCommand& command,
                         eStockInvestmentsType investments,
-                        const garnet::CipherAES_string& aes_pwd)
+                        const garnet::CipherAES_string& aes_pwd,
+                        int64_t tickCount)
     {
         const auto callback = [this, investments](bool b_result,
                                                   const RcvResponseStockOrder& rcv_order,
@@ -621,6 +627,11 @@ private:
         }
         if (m_b_lock_odmng_and_wait_execinfo) {
             // 次約定情報取得までロック
+            return false;
+        }
+        const int64_t MIN_ORDER_INTV_TICK = garnet::utility_datetime::ToMiliSecondsFromSecond(1);
+        if (tickCount < m_last_tick_rcv_rep_order + MIN_ORDER_INTV_TICK) {
+            // 連射禁止
             return false;
         }
 
@@ -684,8 +695,11 @@ private:
      *  @brief  命令リスト先頭の命令を処理する
      *  @param  investments 取引所種別
      *  @param  aes_pwd
+     *  @param  tickCount   経過時間[ミリ秒]
      */
-    void IssueOrder(eStockInvestmentsType investments, const garnet::CipherAES_string& aes_pwd)
+    void IssueOrder(eStockInvestmentsType investments,
+                    const garnet::CipherAES_string& aes_pwd,
+                    int64_t tickCount)
     {
         if (m_command_list.empty()) {
             return; // 空
@@ -699,8 +713,8 @@ private:
         m_wait_order.push_back(command_ptr);
         m_command_list.pop_front();
 
-        if (!IssueOrderCore(command, investments, aes_pwd)) {
-            // 発注できなかったら結果待ち削除(ラグで起こり得る)
+        if (!IssueOrderCore(command, investments, aes_pwd, tickCount)) {
+            // 発注できなかったら結果待ち削除(ラグ等で起こり得る)
             m_wait_order.pop_back();
         }
     }
@@ -733,6 +747,7 @@ public:
     , m_server_order_id()
     , m_investments(INVESTMENTS_NONE)
     , m_tick_count(0)
+    , m_last_tick_rcv_rep_order(0)
     {
         UpdateMessage msg;
         if (!script_mng.BuildStockTactics(msg, m_tactics, m_tactics_link)) {
@@ -990,7 +1005,7 @@ public:
         InterpretTactics(investments, now_time, sec_time,
                          m_monitoring_data[investments], script_mng);
         // 命令処理
-        IssueOrder(investments, aes_pwd);
+        IssueOrder(investments, aes_pwd, tickCount);
         //
         m_tick_count = tickCount;
         m_investments = investments;

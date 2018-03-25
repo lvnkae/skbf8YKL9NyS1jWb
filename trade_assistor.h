@@ -47,6 +47,12 @@ public:
     void Pause();
 
     /*!
+     *  @brief  ログ出力
+     *  @note   通常日次処理で自動出力される監視銘柄データを任意で出すコマンド
+     */
+    void OutputLog();
+
+    /*!
      *  @brief  Update関数
      *  @param[in]  tickCount   経過時間[ミリ秒]
      *  @param[out] o_message   メッセージ(格納先)

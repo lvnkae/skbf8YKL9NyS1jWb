@@ -117,6 +117,16 @@ public:
     }
 
     /*!
+     *  @brief  ログ出力
+     */
+    void OutputLog()
+    {
+        if (m_pMachine) {
+            m_pMachine->OutputLog();
+        }
+    }
+
+    /*!
      *  @brief  Update関数
      *  @param[in]  tickCount   経過時間[ミリ秒]
      *  @param[out] o_message   メッセージ(格納先)
@@ -181,6 +191,15 @@ void TradeAssistor::Pause()
 {
     m_pImpl->Pause();
 }
+
+/*!
+ *  @brief  ログ出力
+ */
+void TradeAssistor::OutputLog()
+{
+    m_pImpl->OutputLog();
+}
+
 
 /*!
  *  @brief  Update関数
