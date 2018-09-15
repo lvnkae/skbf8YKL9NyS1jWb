@@ -22,6 +22,37 @@ namespace trading
 struct RcvResponseStockOrder;
 
 /*!
+ *  @brief  株時間帯区分(一コマ分)
+ *  @note   時間帯が変わると当日注文とPTS注文は失効する
+ */
+struct StockPeriodOfTimeUnit
+{
+    garnet::HHMMSS m_start; //!< 始端時分秒
+    garnet::HHMMSS m_end;   //!< 終端時分秒
+    eStockPeriodOfTime m_period;       //!< 区分
+
+    StockPeriodOfTimeUnit()
+    : m_start()
+    , m_end()
+    , m_period(PERIOD_NONE)
+    {
+    }
+    StockPeriodOfTimeUnit(const garnet::sTime& start_tm, const garnet::sTime& end_tm)
+    : m_start(start_tm)
+    , m_end(end_tm)
+    , m_period(PERIOD_NONE)
+    {
+    }
+
+    /*!
+     *  @brief  区分設定
+     *  @param  period_str  時間区分文字列
+     *  @retval true    成功
+     */
+    bool SetPeriod(const std::string& mode_str);
+};
+
+/*!
  *  @brief  株取引タイムテーブル(一コマ分)
  */
 struct StockTimeTableUnit
@@ -49,8 +80,8 @@ struct StockTimeTableUnit
     }
 
     /*!
-     *  @brief  モード文字列(スクリプト用)を取引所種別に変換
-     *  @param  mode_str    タイムテーブルモード文字列
+     *  @brief  TTモードを取引所種別に変換
+     *  @param  tt_mode TTモード
      */
     static eStockInvestmentsType ToInvestmentsTypeFromMode(eMode tt_mode)
     {

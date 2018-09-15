@@ -135,6 +135,8 @@ private:
 
     //! 現在の対象取引所
     eStockInvestmentsType m_investments;
+    //! 現在の株時間帯区分
+    eStockPeriodOfTime m_periodoftime;
     //! 経過時間[ミリ秒]
     int64_t m_tick_count;
     //! 最終発注応答時間(tick)
@@ -746,6 +748,7 @@ public:
     , m_exec_order()
     , m_server_order_id()
     , m_investments(INVESTMENTS_NONE)
+    , m_periodoftime(PERIOD_NONE)
     , m_tick_count(0)
     , m_last_tick_rcv_rep_order(0)
     {
@@ -820,8 +823,15 @@ public:
         };
         const auto itPTS = m_monitoring_data.find(INVESTMENTS_PTS);
         if (itPTS != m_monitoring_data.end()) {
+            std::string pts_tag;
+            switch (m_periodoftime)
+            {
+            case PERIOD_DAYTIME:    pts_tag = "pts_day"; break;
+            case PERIOD_NIGHTTIME:  pts_tag = "pts_night"; break;
+            default:                pts_tag = "pts_"; break;
+            }
             for (const auto& md: itPTS->second) {
-                std::thread t(outputLog, md.second, "pts_");
+                std::thread t(outputLog, md.second, pts_tag);
                 t.detach();
             }
         }
@@ -965,6 +975,18 @@ public:
     }
 
     /*!
+     *  @brief  株時間帯区分通知
+     *  @param  pot 時間帯区分
+     */
+    void TellPeriodOfTime(eStockPeriodOfTime pot)
+    {
+        // 未設定の場合のみ書き込む
+        if (m_periodoftime == PERIOD_NONE) {
+            m_periodoftime = pot;
+        }
+    }
+    
+    /*!
      *  @brief  Update関数
      *  @param  tickCount   経過時間[ミリ秒]
      *  @param  now_time    現在時分秒
@@ -1101,6 +1123,15 @@ void StockOrderingManager::UpdateExecInfo(const std::vector<StockExecInfoAtOrder
     m_pImpl->UpdateExecInfo(rcv_info);
 }
 
+/*!
+ *  @brief  株時間帯区分通知
+ *  @param  pot 時間帯区分
+ */
+void StockOrderingManager::TellPeriodOfTime(eStockPeriodOfTime pot)
+{
+    m_pImpl->TellPeriodOfTime(pot);
+}
+    
 /*!
  *  @brief  Update関数
  *  @param  tickCount   経過時間[ミリ秒]

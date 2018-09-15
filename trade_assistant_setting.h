@@ -18,6 +18,7 @@ class UpdateMessage;
 
 namespace trading
 {
+struct StockPeriodOfTimeUnit;
 struct StockTimeTableUnit;
 class StockTradingTactics;
 
@@ -91,6 +92,12 @@ public:
      *  @note   luaにアクセスする都合上constにできない
      */
     bool BuildJPXHoliday(UpdateMessage& o_message, std::vector<garnet::MMDD>& o_holidays);
+    /*!
+     *  @brief  株時間帯区分構築
+     *  @param[out] o_message
+     *  @param[out] o_period    時間帯区分格納先
+     */
+    bool BuildStockPeriodOfTime(UpdateMessage& o_message, std::vector<StockPeriodOfTimeUnit>& o_period);
     /*!
      *  @brief  株取引タイムテーブル構築
      *  @param[out] o_message

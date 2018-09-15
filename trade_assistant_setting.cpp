@@ -558,6 +558,50 @@ public:
     }
 
     /*!
+     *  @brief  株時間帯区分構築
+     *  @param[out] o_message
+     *  @param[out] o_period    時間帯区分格納先
+     */
+    bool BuildStockPeriodOfTime(UpdateMessage& o_message, std::vector<StockPeriodOfTimeUnit>& o_period)
+    {
+        garnet::LuaAccessor& accessor = m_lua_accessor;
+        o_message.AddMessage("[StockPeriodOfTime]");
+
+        o_message.AddTab();
+        const int32_t num_data = accessor.OpenTable("StockPeriodOfTime");
+        o_period.reserve(num_data);
+        for (int32_t inx = 0; inx < num_data; inx++) {
+            o_message.AddMessage("<TIMEPERIOD" + std::to_string(inx) + ">");
+            accessor.OpenChildTable(inx);
+            const int32_t ARRAY_INX_STARTTIME = 0;
+            const int32_t ARRAY_INX_ENDTIME = 1;
+            const int32_t ARRAY_INX_PERIOD = 2;
+            std::string start_tm_str;
+            std::string end_tm_str;
+            if (accessor.GetArrayParam(ARRAY_INX_STARTTIME, start_tm_str) &&
+                accessor.GetArrayParam(ARRAY_INX_ENDTIME, end_tm_str)) {
+                std::string period_str;
+                if (accessor.GetArrayParam(ARRAY_INX_PERIOD, period_str)) {
+                    garnet::sTime start_tm;
+                    garnet::sTime end_tm;
+                    using garnet::utility_datetime::ToTimeFromString;
+                    if (ToTimeFromString(start_tm_str, "%H:%M:%S", start_tm) &&
+                        ToTimeFromString(end_tm_str, "%H:%M:%S", end_tm)) {
+                        StockPeriodOfTimeUnit pot(start_tm, end_tm);
+                        if (pot.SetPeriod(period_str)) {
+                            o_period.push_back(pot);
+                        }
+                    }
+                }
+            }
+            accessor.CloseTable();
+        }
+        accessor.CloseTable();
+        o_message.DecTab();
+        return true;
+    }
+    
+    /*!
      *  @brief  株取引タイムテーブル構築
      *  @param[out] o_message
      *  @param[out] o_tt        タイムテーブル格納先
@@ -757,6 +801,15 @@ int32_t TradeAssistantSetting::GetPortfolioIndicateForOwned() const
 bool TradeAssistantSetting::BuildJPXHoliday(UpdateMessage& o_message, std::vector<garnet::MMDD>& o_holidays)
 {
     return m_pImpl->BuildJPXHoliday(o_message, o_holidays);
+}
+/*!
+ *  @brief  株時間帯区分構築
+ *  @param[out] o_message
+ *  @param[out] o_period    時間帯区分格納先
+ */
+bool TradeAssistantSetting::BuildStockPeriodOfTime(UpdateMessage& o_message, std::vector<StockPeriodOfTimeUnit>& o_period)
+{
+    return m_pImpl->BuildStockPeriodOfTime(o_message, o_period);
 }
 /*!
  *  @brief  株取引タイムテーブル構築

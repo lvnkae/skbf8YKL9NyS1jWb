@@ -30,6 +30,24 @@ StockCode::StockCode(uint32_t code)
 }
 
 /*!
+ *  @brief  時間帯区分設定
+ *  @param  period_str  時間帯区分文字列
+ */
+bool StockPeriodOfTimeUnit::SetPeriod(const std::string& period_str)
+{
+    if (period_str.compare("DAY") == 0) {
+        m_period = PERIOD_DAYTIME;
+        return true;
+    } else if (period_str.compare("NIGHT") == 0) {
+        m_period = PERIOD_NIGHTTIME;
+        return true;
+    } else {
+        m_period = PERIOD_NONE;
+        return false;
+    }
+}
+
+/*!
  *  @brief  モード設定
  *  @param  mode_str    タイムテーブルモード文字列
  */

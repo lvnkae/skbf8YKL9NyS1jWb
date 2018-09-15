@@ -56,6 +56,8 @@ private:
 
     //!< JPX固有休業日(土日祝でなくとも休みになる日)
     std::vector<garnet::MMDD> m_jpx_holiday;
+    //!< 株時間帯区分
+    std::vector<StockPeriodOfTimeUnit> m_periodoftime;
     //!< 株取引タイムテーブル
     std::vector<StockTimeTableUnit> m_timetable;
 
@@ -71,6 +73,7 @@ private:
     eSequence m_after_wait_seq;                 //!< ウェイト開けの遷移先シーケンス
     StockTimeTableUnit::eMode m_prev_tt_mode;   //!< 前回Update_MainTradeのTimeTableモード
     garnet::sTime m_prev_fuzzy_time;            //!< 前回Update_MainTradeの時刻(ファジー)
+    eStockPeriodOfTime m_prev_pot;              //!< 前回Update_MainTradeの株時間帯区分
     int64_t m_last_monitoring_tick;             //!< 最後に監視銘柄情報(価格データ)を要求したtickCount
     int64_t m_last_req_exec_info_tick;          //!< 最後に当日約定情報を要求したtickCount
     bool m_lock_update_margin;                  //!< 余力更新ロックフラグ
@@ -98,6 +101,9 @@ private:
         m_sequence = SEQ_ERROR;
         //
         if (!script_mng.BuildJPXHoliday(o_message, m_jpx_holiday)) {
+            return;
+        }
+        if (!script_mng.BuildStockPeriodOfTime(o_message, m_periodoftime)) {
             return;
         }
         if (!script_mng.BuildStockTimeTable(o_message, m_timetable)) {
@@ -199,6 +205,7 @@ private:
     {
         m_sequence = SEQ_TRADING;
         m_prev_tt_mode = StockTimeTableUnit::CLOSED;
+        m_prev_pot = PERIOD_NONE;
 
         switch (m_securities)
         {
@@ -209,6 +216,20 @@ private:
         default:
             break;
         }
+    }
+
+    /*!
+     *  @brief  時間帯区分決定
+     *  @param  now_tm      現在時刻(ファジー)
+     */
+    eStockPeriodOfTime DecideStockPeriodOfTime(const garnet::HHMMSS& now_tm)
+    {
+        for (const auto& pot : m_periodoftime) {
+            if (pot.m_start <= now_tm && now_tm <= pot.m_end) {
+                return pot.m_period;
+            }
+        }
+        return PERIOD_NONE;
     }
 
     /*!
@@ -308,6 +329,14 @@ private:
             m_prev_fuzzy_time = now_tm;
         }
         //
+        const auto pot = DecideStockPeriodOfTime(now_tm);
+        if (m_prev_pot == PERIOD_DAYTIME && pot == PERIOD_NIGHTTIME) {
+            // デイタイム→ナイトタイムに切り替わったら仕切り直し
+            m_sequence = SEQ_DAILY_PROCESS;
+            m_pTwSession->Tweet(std::wstring(), L"ナイトタイムが始まりました");
+            return;
+        }
+        //
         auto now_tt(std::move(CorrectTimeTable(tickCount, now_tm)));
         auto now_mode = now_tt.m_mode;
 
@@ -370,6 +399,8 @@ private:
                     m_pOrderingManager->Update(tickCount, now_tm, now_tt.m_hhmmss,
                                                investments_type, m_aes_pwd_sub, script_mng);
                 }
+                // 時間帯区分通知
+                m_pOrderingManager->TellPeriodOfTime(pot);
             }
         } else {
             if (m_reserve_output_log) {
@@ -379,6 +410,7 @@ private:
         }
 
         m_prev_tt_mode = now_mode;
+        m_prev_pot = pot;
     }
 
     /*!
@@ -464,6 +496,7 @@ public:
     , m_pStarter()
     , m_pOrderingManager()
     , m_jpx_holiday()
+    , m_periodoftime()
     , m_timetable()
     , m_rand_gen()
     , m_aes_uid()
@@ -475,6 +508,7 @@ public:
     , m_wait_count_ms(0)
     , m_after_wait_seq(SEQ_ERROR)
     , m_prev_tt_mode(StockTimeTableUnit::CLOSED)
+    , m_prev_pot(PERIOD_NONE)
     , m_last_monitoring_tick(0)
     , m_last_req_exec_info_tick(0)
     , m_lock_update_margin(false)

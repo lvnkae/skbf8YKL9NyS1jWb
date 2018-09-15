@@ -48,6 +48,16 @@ enum eStockInvestmentsType
 };
 
 /*!
+ *  @brief  株時間帯区分
+ */
+enum eStockPeriodOfTime
+{
+    PERIOD_NONE,        //!< 虚無
+    PERIOD_DAYTIME,     //!< デイタイム
+    PERIOD_NIGHTTIME,   //!< ナイトタイム
+};
+
+/*!
  *  @brief  注文種別
  */
 enum eOrderType

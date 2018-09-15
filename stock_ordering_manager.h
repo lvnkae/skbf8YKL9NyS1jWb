@@ -97,6 +97,12 @@ public:
     void UpdateExecInfo(const std::vector<StockExecInfoAtOrder>& rcv_info);
 
     /*!
+     *  @brief  Š”ŠÔ‘Ñ‹æ•ª’Ê’m
+     *  @param  pot ŠÔ‘Ñ‹æ•ª
+     */
+    void TellPeriodOfTime(eStockPeriodOfTime pot);
+
+    /*!
      *  @brief  UpdateŠÖ”
      *  @param  tickCount   Œo‰ßŠÔ[ƒ~ƒŠ•b]
      *  @param  now_time    Œ»İ•ª•b
